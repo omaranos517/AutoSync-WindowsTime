@@ -36,5 +36,5 @@ A Python-based utility designed to fix Windows clock desynchronization issues au
 ### Running the Script
 Ensure you have Python installed, then run:
 ```bash
-python your_script_name.py
+python sync_time.py
 ```
