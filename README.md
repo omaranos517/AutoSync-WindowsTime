@@ -2,224 +2,236 @@
     <img height="65" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" />
 </p>
 
-## 🕒 Windows Time Auto-Synchronizer
+# 🕒 TimeSync – Windows Time Auto Synchronizer
 
-A lightweight system utility that automatically fixes Windows time desynchronization, especially for users running Windows + Linux (Ubuntu) dual boot via GRUB.
-
-### ❗ The Problem (Why This Exists)
-
-**If you use:**
-    
-- Windows + Ubuntu dual boot
-    
-- GRUB bootloader
-    
-- Or frequently switch between operating systems
-- 
-
-**You may notice that:**
-
-Windows time becomes incorrect after reboot
-
-Clock shifts by ±1–3 hours
-
-Manual sync fixes it — but only *temporarily*
-
-
-### ⚠️ Why does this happen?
-
-Linux and Windows handle the system clock differently:
-
-System	Hardware Clock (RTC)
-Linux	UTC time
-Windows	Local time
-
-**When switching between systems:**
-
-Linux writes UTC time to BIOS
-
-Windows interprets it as local time
-
-➡️ Result: *incorrect Windows clock every reboot*
+A lightweight command-line utility that automatically fixes Windows time desynchronization issues — especially common on dual-boot systems (Windows + Linux).
 
 ---
 
-## ✅ What This Tool Does
+## ❗ The Problem
 
-This program ensures that Windows always corrects its time automatically, without requiring any manual action.
+If you use:
 
-- Fixes time after every boot
+- Windows + Linux (Ubuntu / Arch / Fedora)
+- Dual boot with GRUB
+- Or frequently switch between operating systems
+- Damaged CMOS battery
+- Broken Windows Time service
+
+You may notice:
+
+- Windows clock becomes incorrect after reboot
+- Time shifts by ±1–3 hours
+- Manual sync works only temporarily
+
+---
+
+## ⚠️ Why Does This Happen?
+
+Linux and Windows store system time differently:
+
+| System | Hardware Clock (RTC) |
+|------|------|
+| Linux | UTC |
+| Windows | Local Time |
+
+When switching systems:
+
+- Linux writes UTC time to BIOS
+- Windows reads it as local time
+
+➡️ Result: incorrect Windows clock every boot.
+
+---
+
+## ✅ What TimeSync Does
+
+TimeSync automatically repairs Windows time synchronization using the official Windows Time Service.
+
+It:
+
+- Fixes incorrect clock after reboot
+- Restores broken Windows Time service
+- Forces immediate resynchronization
+- Can run automatically at Windows startup
 - Works silently in the background
-- No registry edits required
-- No permanent system modification
-- No scheduled tasks needed
+
+No system hacks.  
+No scheduled tasks.  
+No permanent registry changes.
 
 ---
 
 ## ✨ Features
 
 ### 🔐 Automatic Administrator Elevation
-Requests UAC permission only when required.
+Requests administrator permission only when required.
 
-### 🔁 Startup Persistence
-Automatically copies itself to:
-    ```
-    AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
-    ```
-
-so it runs at every login.
+---
 
 ### ⚙️ Windows Time Service Repair
-
-Sets w32time service to automatic
-
-Restarts the service if broken
-
-Rebuilds synchronization configuration
-
-### 🌍 Reliable Global NTP Servers
-
-time.google.com
-
-pool.ntp.org
-
-time.windows.com
-
-### 📦 Supports both .py and .exe
-
-Works with Python scripts
-
-Fully compatible with PyInstaller executables
+- Enables `w32time` service
+- Restarts the service safely
+- Reconfigures synchronization providers
 
 ---
 
-## 🛠️ How It Works
-### 1️⃣ Administrator Check
+### 🌍 Trusted NTP Servers
+Uses reliable public time servers:
 
-Uses:
-    ```
-    ctypes.windll.shell32.IsUserAnAdmin()
-    ```
-
-If not elevated, Windows automatically prompts for admin access.
-
-### 2️⃣ Self Installation
-
-On first run:
-
-Detects its current location
-
-Copies itself to the Startup folder
-
-Prevents duplicate copies
-
-### 3️⃣ Time Synchronization Process
-
-The tool performs the following:
-
-• Enable Windows Time Service
-• Restart w32time service
-• Configure trusted NTP servers
-• Force immediate synchronization
-
-## 💻 Requirements
-
-- Operating System: Windows 10 / Windows 11
-
-- Permissions: Administrator privileges (requested automatically)
-
-- Python Version (if running script): Python 3.9+
+- `time.google.com`
+- `pool.ntp.org`
+- `time.windows.com`
 
 ---
 
-## 🚀 Usage
-▶ Run from Python
+### 🧩 CLI Command Support
+After installation:
+
 ```bash
-python sync_time.py
+timesync now
 ```
 
-**On first run:**
+Works from any CMD or PowerShell window.
 
-Admin permission will be requested
+### 🚀 Startup Auto-Sync
 
-Script will install itself automatically
+Optional automatic synchronization when Windows starts.
 
-Time will be synchronized instantly
-
-## 📦 Convert to EXE (Recommended)
-
-You can convert it to a standalone Windows executable.
-
-**🔧 Using PyInstaller:**
-```
-pip install pyinstaller
-pyinstaller --onefile --noconsole sync_time.py
-```
-
-Output file:
-
-dist/sync_time.exe
-
-
-You can now delete Python — the EXE works independently.
-
----
-
-## 🔁 When Does It Run?
-
-Automatically at every Windows login
-
-Especially useful after booting Linux and returning to Windows
-
----
-
-## 🔒 Is This Safe?
-
-- No registry modification
-- No background service installation
+- No tray icons
+- No background services
 - No scheduled tasks
-- No telemetry
-- No internet connection except NTP
-
-*The tool only executes official Windows commands.*
 
 ---
 
-## 📌 Ideal For
+## 💻 System Requirements
 
-- Dual boot users (Windows + Linux)
+- Windows 10 / Windows 11
+
+- Administrator permission (requested automatically)
+
+---
+
+## 🚀 Installation
+Run the EXE installer: ```TimeSync.exe```
+
+
+On first launch, you will see an installer menu:
+
+```
+1) Install
+2) Sync time once (no installation)
+3) Exit
+```
+
+*If installed:*
+
+Files are copied to: ```C:\Program Files\TimeSync```
+
+
+```timesync``` command becomes available system-wide.
+
+Same behavior — installer will appear automatically.
+
+---
+
+## 🧪 Usage
+Sync time immediately
+```
+timesync now
+```
+
+Enable auto-sync at startup
+```
+timesync startup enable
+```
+
+Disable startup sync
+```
+timesync startup disable
+```
+
+Check system status
+```
+timesync status
+```
+
+*Output example:*
+
+```
+Admin: True
+In PATH: True
+Startup: Enabled
+```
+
+Uninstall completely
+```
+timesync uninstall
+```
+
+---
+
+## 🔒 Safety & Transparency
+
+**TimeSync:**
+
+- ❌ Does NOT modify system time manually
+
+- ❌ Does NOT edit BIOS or RTC
+
+- ❌ Does NOT create Windows services
+
+- ❌ Does NOT add scheduled tasks
+
+- ❌ Does NOT collect data
+
+- ❌ Does NOT run permanently
+
+**✔ Uses only official Windows commands:**
+
+- ```sc```
+
+- ```net```
+
+- ```w32tm```
+
+**📌 Ideal For:**
+
+- Dual-boot users (Windows + Linux)
 
 - Developers
 
 - Laptop users
 
-- BIOS time drift issues
-
 - Virtual machines
 
-- Systems with broken time service
+- Systems with broken time synchronization
+
+- BIOS time drift issues
+
+---
+
+## 🏷 Version
+TimeSync v1.0.0
 
 ---
 
 ## ⭐ Final Note
 
-This tool exists because:
+Windows still does not automatically fix time drift caused by Linux dual-boot.
 
-***Windows should automatically fix its time — but it doesn’t.***
+Until it does — TimeSync keeps your clock accurate automatically.
 
-Until Microsoft resolves this dual-boot issue,
-This utility ensures your clock is always correct.
+*If you have ideas for:*
 
-If you want:
+- GUI version
 
-🔥 tray icon version
+- tray icon
 
-🔥 background silent service
+- background service
 
-🔥 auto-update support
+- auto-update
 
-🔥 signed executable
+- signed executable
 
-🔥 GUI version
-
-***Feel free to contribute or open an issue ⭐***
+**Feel free to open an issue or contribute ⭐**
