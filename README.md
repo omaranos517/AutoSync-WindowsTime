@@ -6,6 +6,12 @@
 
 A lightweight command-line utility that automatically fixes Windows time desynchronization issues — especially common on dual-boot systems (Windows + Linux).
 
+<p align="center">
+  <a href="https://github.com/omaranos517/AutoSync-WindowsTime/releases/latest">
+    <img src="https://img.shields.io/badge/⬇%20Download-Latest%20Release-blue?style=for-the-badge">
+  </a>
+</p>
+
 ---
 
 ## ❗ The Problem
@@ -104,14 +110,6 @@ Optional automatic synchronization when Windows starts.
 
 ---
 
-## 💻 System Requirements
-
-- Windows 10 / Windows 11
-
-- Administrator permission (requested automatically)
-
----
-
 ## 🚀 Installation
 Run the EXE installer: ```TimeSync.exe```
 
@@ -168,6 +166,14 @@ Uninstall completely
 ```
 timesync uninstall
 ```
+
+---
+
+## 💻 System Requirements
+
+- Windows 10 / Windows 11
+
+- Administrator permission (requested automatically)
 
 ---
 
