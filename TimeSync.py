@@ -6,7 +6,7 @@ import shutil
 import argparse
 import winreg
 from pathlib import Path
-import time
+from time import sleep
 
 APP_NAME = "TimeSync"
 INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
@@ -40,11 +40,7 @@ def relaunch_as_admin():
     )
     sys.exit(0)
     
-
-# ==================================================
-# CORE PATH LOGIC
-# ==================================================
-
+    
 # ==================================================
 # PATH INSTALL
 # ==================================================
@@ -327,8 +323,7 @@ def first_run_installer():
         return  # command mode
 
     if is_in_path():
-        # البرنامج مثبت → نفذ المزامنة تلقائيًا
-        cmd_now()
+        cmd_now() # synchronize time on startup
         return  # already installed
 
     print("""
@@ -355,11 +350,13 @@ Please choose an option:
 
         if startup_choice == "y":
             create_startup_shortcut(get_installed_exe_path())
+            print("✅ Startup shortcut created.")
+            sleep(2)
     
     elif choice == "2":
         cmd_now()
         print("Time synchronized without installation.")
-        time.sleep(2)
+        sleep(2)
     else:
         sys.exit(0)
 
