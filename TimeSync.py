@@ -327,6 +327,8 @@ def first_run_installer():
         return  # command mode
 
     if is_in_path():
+        # البرنامج مثبت → نفذ المزامنة تلقائيًا
+        cmd_now()
         return  # already installed
 
     print("""
