@@ -56,7 +56,7 @@ def get_installed_exe_path():
     return INSTALL_DIR / get_current_exe_path().name
 
 # ==================================================
-# INSTALLATION ACTIONS
+# INSTALLATION AND UNINSTALLATION LOGIC
 # ==================================================
 
 def install_logic():
@@ -104,143 +104,6 @@ def add_to_system_path(path_to_add):
     ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 0, 100, None)
 
 
-def get_app_path():
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable)
-    return Path(__file__).resolve()
-
-
-# ==================================================
-# STARTUP SHORTCUT
-# ==================================================
-
-def startup_folder():
-    return Path(os.getenv("APPDATA")) / \
-        "Microsoft/Windows/Start Menu/Programs/Startup"
-
-
-def create_startup_shortcut(script_path: Path = None):
-    """
-    ينشئ اختصار في مجلد Startup.
-    إذا لم يُمرر script_path، يستخدم النسخة المثبتة في Program Files.
-    """
-    if script_path is None:
-        script_path = get_installed_exe_path()
-
-    startup = Path(os.getenv("APPDATA")) / "Microsoft/Windows/Start Menu/Programs/Startup"
-    shortcut_path = startup / f"{script_path.stem}.lnk"
-
-    vbs = f"""
-Set oWS = WScript.CreateObject("WScript.Shell")
-sLinkFile = "{shortcut_path}"
-Set oLink = oWS.CreateShortcut(sLinkFile)
-oLink.TargetPath = "{script_path}"
-oLink.WorkingDirectory = "{script_path.parent}"
-oLink.Save
-"""
-
-    vbs_file = Path(script_path.parent) / "temp_shortcut.vbs"
-    vbs_file.write_text(vbs)
-    os.system(f'cscript //nologo "{vbs_file}"')
-    vbs_file.unlink()
-    print("✅ Startup shortcut created")
-
-
-# ==================================================
-# TIME SYNC
-# ==================================================
-
-def sync_windows_time():
-    try:
-        print("🔄 Syncing Windows time...\n")
-
-        subprocess.run(
-            "sc config w32time start= auto",
-            shell=True, check=True
-        )
-
-        subprocess.run("net stop w32time", shell=True)
-        subprocess.run("net start w32time", shell=True)
-
-        peers = (
-            "time.google.com,0x1 "
-            "pool.ntp.org,0x1 "
-            "time.windows.com,0x1"
-        )
-
-        subprocess.run(
-            f'w32tm /config /manualpeerlist:"{peers}" '
-            "/syncfromflags:manual /update",
-            shell=True, check=True
-        )
-
-        result = subprocess.run(
-            "w32tm /resync",
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode == 0:
-            print("✅ Time synchronized successfully.")
-        else:
-            print(result.stderr)
-
-    except Exception as e:
-        print("❌ Error:", e)
-
-
-# ==================================================
-# COMMANDS
-# ==================================================
-
-def cmd_install():
-    relaunch_as_admin()
-    install_logic()
-    print("✅ Installed successfully")
-
-def cmd_uninstall():
-    relaunch_as_admin()
-    remove_from_path()
-    remove_startup_shortcut()
-    # إزالة الملف من Program Files
-    target_path = get_installed_exe_path()
-    if target_path.exists():
-        try:
-            target_path.unlink()
-            print(f"🗑️ Removed installed file: {target_path}")
-        except Exception as e:
-            print(f"❌ Failed to remove installed file: {e}")
-    print("🗑️ Uninstalled successfully")
-
-
-def cmd_now():
-    relaunch_as_admin()
-    sync_windows_time()
-
-
-def cmd_status():
-    print("Admin:", is_admin())
-    print("In PATH:", is_in_path())
-    print("Startup:", startup_exists())
-
-
-def cmd_startup_enable():
-    relaunch_as_admin()
-    create_startup_shortcut(get_installed_exe_path())
-    print("✅ Startup enabled")
-
-
-def cmd_startup_disable():
-    relaunch_as_admin()
-    remove_startup_shortcut()
-    print("❌ Startup disabled")
-
-
-# ==================================================
-# REMOVE FROM SYSTEM PATH
-# ==================================================
-
 def remove_from_path():
     path_to_remove = str(INSTALL_DIR).rstrip("\\").lower()
     reg_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
@@ -279,39 +142,171 @@ def remove_from_path():
         print("PATH cleanup failed:", e)
 
 
-
-# ==================================================
-# REMOVE STARTUP SHORTCUT
-# ==================================================
-
-def remove_startup_shortcut():
-    exe_path = get_app_path()
-    shortcut = startup_folder() / f"{exe_path.stem}.lnk"
-
-    if shortcut.exists():
-        shortcut.unlink()
-        print("✅ Startup shortcut removed")
-    else:
-        print("❌ Startup shortcut not found")
-
-
-# ==================================================
-# CHECK IF IN PATH
-# ==================================================
-
 def is_in_path():
     exe_dir = str(get_app_path().parent)
     system_path = os.environ.get("PATH", "")
     return exe_dir.lower() in system_path.lower()
 
+
+def get_app_path():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable)
+    return Path(__file__).resolve()
+
+
 # ==================================================
-# CHECK STARTUP STATUS
+# STARTUP TASK (TASK SCHEDULER)
 # ==================================================
 
+def create_startup_task(script_path: Path = None):
+    if script_path is None:
+        script_path = get_installed_exe_path()
+
+    # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
+    task_name = "TimeSyncStartup"
+    cmd = (
+        f'schtasks /create /tn "{task_name}" /tr "\'{script_path}\' now --auto" '
+        f'/sc onlogon /rl highest /f'
+    )
+    
+    try:
+        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        print("✅ Startup task created in Task Scheduler (Admin Privileges)")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to create task: {e}")
+
+
+def remove_startup_task():
+    task_name = "TimeSyncStartup"
+    cmd = f'schtasks /delete /tn "{task_name}" /f'
+    try:
+        # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
+        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        print("✅ Startup task removed successfully.")
+    except subprocess.CalledProcessError:
+        print("❌ Startup task not found or already removed.")
+
+
 def startup_exists():
-    exe_path = get_app_path()
-    shortcut = startup_folder() / f"{exe_path.stem}.lnk"
-    return shortcut.exists()
+    task_name = "TimeSyncStartup"
+    cmd = f'schtasks /query /tn "{task_name}"'
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        return task_name in result.stdout
+    except:
+        return False
+
+# ==================================================
+# TIME SYNC CORE
+# ==================================================
+
+def sync_windows_time():
+    try:
+        print("🔄 Syncing Windows time...\n")
+
+        if "--auto" in sys.argv: sleep(10)  # ** delay for startup sync
+
+        subprocess.run(
+            "sc config w32time start= auto",
+            shell=True, check=True
+        )
+
+        subprocess.run("net stop w32time", shell=True)
+        subprocess.run("net start w32time", shell=True)
+
+        peers = (
+            "time.google.com,0x1 "
+            "pool.ntp.org,0x1 "
+            "time.windows.com,0x1"
+        )
+
+        subprocess.run(
+            f'w32tm /config /manualpeerlist:"{peers}" '
+            "/syncfromflags:manual /update",
+            shell=True, check=True
+        )
+
+        result = subprocess.run(
+            "w32tm /resync",
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print("✅ Time synchronized successfully.")
+        else:
+            print(result.stderr)
+
+    except Exception as e:
+        print("❌ Error:", e)
+
+# ==================================================
+# COMMANDS
+# ==================================================
+
+def cmd_install():
+    relaunch_as_admin()
+    install_logic()
+    print("✅ Installed successfully")
+
+def cmd_uninstall():
+    relaunch_as_admin()
+    
+    print("🗑️ Starting uninstallation...")
+    
+    # 1. إزالة المهمة المجدولة (Startup)
+    remove_startup_task()
+    
+    # 2. إزالة المسار من بيئة النظام (PATH)
+    remove_from_path()
+    
+    # 3. إعداد عملية مسح المجلد بالكامل
+    target_exe = get_installed_exe_path()
+    current_exe = get_current_exe_path()
+
+    # إذا كان المستخدم يشغل البرنامج من مكان التثبيت، لا يمكننا مسحه مباشرة
+    # سنقوم بإنشاء أمر CMD خارجي ينتظر إغلاق البرنامج ثم يمسح المجلد
+    if current_exe.parent == INSTALL_DIR:
+        print("⏳ Cleaning up after exit...")
+        # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
+        cmd_cleanup = f'timeout /t 2 /nobreak && rd /s /q "{INSTALL_DIR}"'
+        subprocess.Popen(cmd_cleanup, shell=True)
+        print("✅ Uninstallation scheduled. This window will close.")
+        sys.exit(0)
+    else:
+        # إذا كان المستخدم يشغله من مكان آخر (مثل Downloads)، يمكننا المسح فوراً
+        if INSTALL_DIR.exists():
+            try:
+                shutil.rmtree(INSTALL_DIR)
+                print(f"🗑️ Removed directory: {INSTALL_DIR}")
+            except Exception as e:
+                print(f"❌ Failed to remove directory: {e}")
+                
+    print("✅ Uninstalled successfully.")
+
+
+def cmd_now():
+    relaunch_as_admin()
+    sync_windows_time()
+
+
+def cmd_status():
+    print("Admin:", is_admin())
+    print("In PATH:", is_in_path())
+    print("Startup:", startup_exists())
+
+
+def cmd_startup_enable():
+    relaunch_as_admin()
+    create_startup_task(get_installed_exe_path())
+    print("✅ Startup enabled")
+
+
+def cmd_startup_disable():
+    relaunch_as_admin()
+    remove_startup_task()
+    print("❌ Startup disabled")
 
 # ==================================================
 # FIRST RUN INSTALLER
@@ -349,7 +344,7 @@ Please choose an option:
         ).lower().strip()
 
         if startup_choice == "y":
-            create_startup_shortcut(get_installed_exe_path())
+            create_startup_task(get_installed_exe_path())
             print("✅ Startup shortcut created.")
             sleep(2)
     
@@ -374,7 +369,10 @@ def main():
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("uninstall")
-    sub.add_parser("now")
+
+    now_parser = sub.add_parser("now")
+    now_parser.add_argument("--auto", action="store_true", help="Delayed sync for startup")
+
     sub.add_parser("status")
 
     startup = sub.add_parser("startup")
