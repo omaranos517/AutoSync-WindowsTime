@@ -164,6 +164,7 @@ def create_startup_task(script_path: Path = None):
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
     task_name = "TimeSyncStartup"
+
     cmd = (
         f'schtasks /create /tn "{task_name}" /tr "\'{script_path}\' now --auto" '
         f'/sc onlogon /rl highest /f'
@@ -197,14 +198,37 @@ def startup_exists():
         return False
 
 # ==================================================
+# Notification
+# ==================================================
+
+def send_notification(title, message):
+    """إرسال إشعار ويندوز باستخدام PowerShell"""
+    powershell_cmd = f"""
+    [Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');
+    [Reflection.Assembly]::LoadWithPartialName('System.Drawing');
+    $notify = New-Object System.Windows.Forms.NotifyIcon;
+    $notify.Icon = [System.Drawing.SystemIcons]::Information;
+    $notify.Visible = $true;
+    $notify.ShowBalloonTip(3000, '{title}', '{message}', [System.Windows.Forms.ToolTipIcon]::Info);
+    """
+    try:
+        subprocess.run(["powershell", "-Command", powershell_cmd], capture_output=True)
+    except:
+        pass
+
+
+# ==================================================
 # TIME SYNC CORE
 # ==================================================
 
 def sync_windows_time():
     try:
-        print("🔄 Syncing Windows time...\n")
+        is_auto = "--auto" in sys.argv
 
-        if "--auto" in sys.argv: sleep(10)  # ** delay for startup sync
+        if not is_auto:
+            print("🔄 Syncing Windows time...\n")
+        else:
+            sleep(8)  # ** delay for startup sync
 
         subprocess.run(
             "sc config w32time start= auto",
@@ -234,9 +258,15 @@ def sync_windows_time():
         )
 
         if result.returncode == 0:
-            print("✅ Time synchronized successfully.")
+            if is_auto:
+                send_notification(APP_NAME, "✅ Time synchronized successfully.")
+            else:
+                print("✅ Time synchronized successfully.")
         else:
-            print(result.stderr)
+            if is_auto:
+                send_notification(APP_NAME, "The time synchronization process failed.")
+            else:
+                print(result.stderr)
 
     except Exception as e:
         print("❌ Error:", e)
