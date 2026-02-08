@@ -165,13 +165,17 @@ def create_startup_task(script_path: Path = None):
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
     task_name = "TimeSyncStartup"
 
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0
+
     cmd = (
         f'schtasks /create /tn "{task_name}" /tr "\'{script_path}\' now --auto" '
         f'/sc onlogon /rl highest /f'
     )
     
     try:
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        subprocess.run(cmd, shell=True, check=True, capture_output=True, startupinfo=startupinfo)
         print("✅ Startup task created in Task Scheduler (Admin Privileges)")
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to create task: {e}")
@@ -228,6 +232,10 @@ def sync_windows_time():
         if not is_auto:
             print("🔄 Syncing Windows time...\n")
         else:
+            hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
+            if hwnd:
+                ctypes.windll.user32.ShowWindow(hwnd, 0) # إخفاء النافذة (0 تعني SW_HIDE)
+
             sleep(8)  # ** delay for startup sync
 
         subprocess.run(
