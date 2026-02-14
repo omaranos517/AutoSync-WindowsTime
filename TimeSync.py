@@ -5,6 +5,7 @@ import sys
 import shutil
 import argparse
 import winreg
+from socket import create_connection
 from pathlib import Path
 from time import sleep
 
@@ -225,18 +226,47 @@ def send_notification(title, message):
 # TIME SYNC CORE
 # ==================================================
 
+def has_internet_connection():
+    """تحقق مما إذا كان هناك اتصال بالإنترنت"""
+    try:
+        # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
+        conn = create_connection(("8.8.8.8", 53), timeout=3)
+        conn.close()
+        return True
+    except OSError:
+        pass
+    return False
+
 def sync_windows_time():
     try:
         is_auto = "--auto" in sys.argv
 
         if not is_auto:
+            if not has_internet_connection():
+                print("❌ No internet connection. Please connect to the internet and try again.")
+                return
+            
             print("🔄 Syncing Windows time...\n")
         else:
             hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
             if hwnd:
                 ctypes.windll.user32.ShowWindow(hwnd, 0) # إخفاء النافذة (0 تعني SW_HIDE)
 
-            sleep(8)  # ** delay for startup sync
+            connection = False
+            for i in range(60):
+                if has_internet_connection():
+                    connection = True
+                    break
+
+                if is_auto and i == 5:
+                    send_notification(APP_NAME, "⏳ Waiting for internet connection to sync time...")
+
+                sleep(10)
+            
+            if not connection:
+                send_notification(APP_NAME, "❌ No internet connection. Time sync failed.")
+                return
+                
 
         subprocess.run(
             "sc config w32time start= auto",
