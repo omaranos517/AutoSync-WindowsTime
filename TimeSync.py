@@ -293,13 +293,13 @@ def sync_windows_time():
                     connection = True
                     break
 
-                if is_auto and i == 5:
-                    send_notification(APP_NAME, "⏳ Waiting for internet connection to sync time...")
+                if i == 5:
+                    send_notification("No Internet Connection", "⏳ Waiting for internet connection to sync time...")
 
                 sleep(10)
             
             if not connection:
-                send_notification(APP_NAME, "❌ No internet connection. Time sync failed.")
+                send_notification("No Internet Connection", "❌ No internet connection. Time sync failed.")
                 return
                 
 
@@ -332,12 +332,12 @@ def sync_windows_time():
 
         if result.returncode == 0:
             if is_auto:
-                send_notification(APP_NAME, "✅ Time synchronized successfully.")
+                send_notification("Time Sync Success", "✅ Time synchronized successfully.")
             else:
                 print("✅ Time synchronized successfully.")
         else:
             if is_auto:
-                send_notification(APP_NAME, "The time synchronization process failed.")
+                send_notification("Time Sync Failed", "❌ The time synchronization process failed.")
             else:
                 print(result.stderr)
 
