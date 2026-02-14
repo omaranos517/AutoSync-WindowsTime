@@ -7,6 +7,7 @@ import argparse
 import winreg
 from socket import create_connection
 from pathlib import Path
+from win10toast import ToastNotifier
 from time import sleep
 
 APP_NAME = "TimeSync"
@@ -207,19 +208,11 @@ def startup_exists():
 # ==================================================
 
 def send_notification(title, message):
-    """إرسال إشعار ويندوز باستخدام PowerShell"""
-    powershell_cmd = f"""
-    [Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');
-    [Reflection.Assembly]::LoadWithPartialName('System.Drawing');
-    $notify = New-Object System.Windows.Forms.NotifyIcon;
-    $notify.Icon = [System.Drawing.SystemIcons]::Information;
-    $notify.Visible = $true;
-    $notify.ShowBalloonTip(3000, '{title}', '{message}', [System.Windows.Forms.ToolTipIcon]::Info);
-    """
     try:
-        subprocess.run(["powershell", "-Command", powershell_cmd], capture_output=True)
-    except:
-        pass
+        notifier = ToastNotifier()
+        notifier.show_toast(title, message, duration=5, threaded=True)
+    except Exception as e:
+        ...
 
 
 # ==================================================
