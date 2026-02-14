@@ -132,6 +132,13 @@ def register_uninstall_info():
             winreg.REG_SZ,
             str(INSTALL_DIR)
         )
+        winreg.SetValueEx(
+            key,
+            "DisplayIcon",
+            0,
+            winreg.REG_SZ,
+            str(get_installed_exe_path())
+        )
 
 
 def remove_from_path():
@@ -247,6 +254,7 @@ def send_notification(title, message):
     try:
         notifier = Notification(
             app_id="TimeSync",
+            icon=str(get_installed_exe_path()),
             title=title,
             msg=message,
             duration="short"
