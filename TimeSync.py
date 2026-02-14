@@ -254,7 +254,6 @@ def send_notification(title, message):
     try:
         notifier = Notification(
             app_id="TimeSync",
-            icon=str(get_installed_exe_path()),
             title=title,
             msg=message,
             duration="short"
