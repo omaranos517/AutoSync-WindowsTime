@@ -7,11 +7,15 @@ import argparse
 import winreg
 from socket import create_connection
 from pathlib import Path
-from win10toast import ToastNotifier
+from winotify import Notification, audio
 from time import sleep
 
 APP_NAME = "TimeSync"
 INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
+VERSION = "1.1.0"
+AUTHOR = "Omar Anoss"
+LICENSE = "MIT License"
+GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"
 
 # ==================================================
 # ADMIN
@@ -88,6 +92,8 @@ def install_logic():
     # 3. إضافة مجلد التثبيت للـ PATH
     add_to_system_path(str(INSTALL_DIR))
 
+    register_uninstall_info()
+
     print(f"✅ Successfully installed at {target_path}")
     print(f"🚀 You can now use '{APP_NAME.lower()}' in any CMD.")
 
@@ -104,6 +110,28 @@ def add_to_system_path(path_to_add):
 
     # إخبار الويندوز بتحديث البيئة فوراً
     ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 0, 100, None)
+
+def register_uninstall_info():
+    uninstall_key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync"
+
+    with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, uninstall_key_path) as key:
+        winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, APP_NAME)
+        winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, VERSION)
+        winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, AUTHOR)
+        winreg.SetValueEx(
+            key,
+            "UninstallString",
+            0,
+            winreg.REG_SZ,
+            f'"{get_installed_exe_path()}" uninstall'
+        )
+        winreg.SetValueEx(
+            key,
+            "InstallLocation",
+            0,
+            winreg.REG_SZ,
+            str(INSTALL_DIR)
+        )
 
 
 def remove_from_path():
@@ -142,6 +170,14 @@ def remove_from_path():
 
     except Exception as e:
         print("PATH cleanup failed:", e)
+
+    try:
+        winreg.DeleteKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync"
+        )
+    except FileNotFoundError:
+        pass
 
 
 def is_in_path():
@@ -209,8 +245,14 @@ def startup_exists():
 
 def send_notification(title, message):
     try:
-        notifier = ToastNotifier()
-        notifier.show_toast(title, message, duration=5, threaded=True)
+        notifier = Notification(
+            app_id="TimeSync",
+            title=title,
+            msg=message,
+            duration="short"
+        )
+        notifier.set_audio(audio.Default, loop=False)
+        notifier.show()
     except Exception as e:
         ...
 
@@ -442,6 +484,9 @@ def main():
     startup_sub.add_parser("enable")
     startup_sub.add_parser("disable")
 
+    sub.add_parser("about")
+    sub.add_parser("version")
+
     args = parser.parse_args()
 
     if args.command:
@@ -459,6 +504,21 @@ def main():
                 cmd_startup_disable()
             else:
                 parser.print_help()
+        elif args.command == "about":
+            print(f"""
+╔══════════════════════════════════════════════╗
+║                  TimeSync Tool               ║
+╠══════════════════════════════════════════════╣
+║  Version  : {VERSION}V
+║  Author   : {AUTHOR}
+║  License  : {LICENSE}
+║  GitHub   : {GITHUB}
+╠══════════════════════════════════════════════╣
+║        Windows Time Synchronization Tool     ║
+╚══════════════════════════════════════════════╝
+""")
+        elif args.command == "version":
+            print(f"TimeSync version {VERSION}V")
     else:
         # إذا لم يتم تمرير أي args → run installer
         first_run_installer()
