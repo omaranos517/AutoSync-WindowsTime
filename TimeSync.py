@@ -31,6 +31,8 @@ def relaunch_as_admin():
     if is_admin():
         return
     
+    print("⚠️  Admin privileges required. Relaunch CMD/PowerShell as admin please...")
+
     # تحضير المسار والوسائط بشكل صحيح
     executable = sys.executable
     if getattr(sys, "frozen", False):
@@ -111,13 +113,31 @@ def add_to_system_path(path_to_add):
     # إخبار الويندوز بتحديث البيئة فوراً
     ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 0, 100, None)
 
+
+def get_folder_size_kb(folder: Path):
+    total = 0
+    for root, dirs, files in os.walk(folder):
+        for name in files:
+            try:
+                fp = Path(root) / name
+                total += fp.stat().st_size
+            except:
+                pass
+    return total // 1024
+
+
 def register_uninstall_info():
     uninstall_key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync"
+    size_in_kb = get_folder_size_kb(INSTALL_DIR)
 
     with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, uninstall_key_path) as key:
         winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, APP_NAME)
         winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, VERSION)
         winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, AUTHOR)
+        winreg.SetValueEx(key, "EstimatedSize", 0, winreg.REG_DWORD, size_in_kb)
+        winreg.SetValueEx(key, "NoModify", 0, winreg.REG_DWORD, 1)
+        winreg.SetValueEx(key, "NoRepair", 0, winreg.REG_DWORD, 1)
+
         winreg.SetValueEx(
             key,
             "UninstallString",
@@ -203,9 +223,9 @@ def get_app_path():
 # STARTUP TASK (TASK SCHEDULER)
 # ==================================================
 
-def create_startup_task(script_path: Path = None):
-    if script_path is None:
-        script_path = get_installed_exe_path()
+def create_startup_task(executable_path: Path = None):
+    if executable_path is None:
+        executable_path = get_installed_exe_path()
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
     task_name = "TimeSyncStartup"
@@ -215,7 +235,7 @@ def create_startup_task(script_path: Path = None):
     startupinfo.wShowWindow = 0
 
     cmd = (
-        f'schtasks /create /tn "{task_name}" /tr "\'{script_path}\' now --auto" '
+        f'schtasks /create /tn "{task_name}" /tr "\'{executable_path}\' now --auto" '
         f'/sc onlogon /rl highest /f'
     )
     
@@ -516,10 +536,11 @@ def main():
 ╔══════════════════════════════════════════════╗
 ║                  TimeSync Tool               ║
 ╠══════════════════════════════════════════════╣
+║
 ║  Version  : {VERSION}V
 ║  Author   : {AUTHOR}
-║  License  : {LICENSE}
 ║  GitHub   : {GITHUB}
+║
 ╠══════════════════════════════════════════════╣
 ║        Windows Time Synchronization Tool     ║
 ╚══════════════════════════════════════════════╝
