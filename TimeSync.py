@@ -31,8 +31,6 @@ def relaunch_as_admin():
     if is_admin():
         return
     
-    print("⚠️  Admin privileges required. Relaunch CMD/PowerShell as admin please...")
-
     # تحضير المسار والوسائط بشكل صحيح
     executable = sys.executable
     if getattr(sys, "frozen", False):
@@ -228,7 +226,7 @@ def create_startup_task(executable_path: Path = None):
         executable_path = get_installed_exe_path()
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
-    task_name = "TimeSyncStartup"
+    task_name = "TimeSync_startup"
 
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -245,9 +243,27 @@ def create_startup_task(executable_path: Path = None):
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to create task: {e}")
 
+def create_resume_task(executable_path: Path = None):
+    if executable_path is None:
+        executable_path = get_installed_exe_path()
+
+    task_name = "TimeSync_Resume"
+
+    cmd = (
+        f'schtasks /create /tn "{task_name}" '
+        f'/tr "\"{executable_path}\" now --auto" '
+        f'/sc onevent '
+        f'/ec System '
+        f'/mo "*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]" '
+        f'/rl highest /f'
+    )
+
+    subprocess.run(cmd, shell=True, check=True)
+    print("✅ Resume task created.")
+
 
 def remove_startup_task():
-    task_name = "TimeSyncStartup"
+    task_name = "TimeSync_startup"
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
@@ -256,6 +272,15 @@ def remove_startup_task():
     except subprocess.CalledProcessError:
         print("❌ Startup task not found or already removed.")
 
+
+def remove_resume_task():
+    task_name = "TimeSync_resume"
+    cmd = f'schtasks /delete /tn "{task_name}" /f'
+    try:
+        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        print("✅ Resume task removed successfully.")
+    except subprocess.CalledProcessError:
+        print("❌ Resume task not found or already removed.")
 
 def startup_exists():
     task_name = "TimeSyncStartup"
@@ -424,12 +449,13 @@ def cmd_now():
 def cmd_status():
     print("Admin:", is_admin())
     print("In PATH:", is_in_path())
-    print("Startup:", startup_exists())
+    print("Startup with windows:", startup_exists())
 
 
 def cmd_startup_enable():
     relaunch_as_admin()
     create_startup_task(get_installed_exe_path())
+    create_resume_task(get_installed_exe_path())
     print("✅ Startup enabled")
 
 
@@ -511,12 +537,21 @@ def main():
     startup_sub.add_parser("enable")
     startup_sub.add_parser("disable")
 
+    resume = sub.add_parser("resume")
+    resume_sub = resume.add_subparsers(dest="action")
+
+    resume_sub.add_parser("enable")
+    resume_sub.add_parser("disable")
+
     sub.add_parser("about")
     sub.add_parser("version")
 
     args = parser.parse_args()
 
     if args.command:
+        if not is_admin():
+            print("⚠️  Admin privileges required. Relaunch CMD/PowerShell as admin please...")
+            sys.exit(1)
         # تنفيذ الأوامر مباشرة
         if args.command == "uninstall":
             cmd_uninstall()
@@ -531,6 +566,14 @@ def main():
                 cmd_startup_disable()
             else:
                 parser.print_help()
+        elif args.command == "resume":
+            if args.action == "enable":
+                create_resume_task(get_installed_exe_path())
+            elif args.action == "disable":
+                remove_resume_task()
+            else:
+                parser.print_help()
+
         elif args.command == "about":
             print(f"""
 ╔══════════════════════════════════════════════╗
