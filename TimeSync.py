@@ -287,7 +287,7 @@ def remove_resume_task():
         print("❌ Resume task not found or already removed.")
 
 def startup_exists():
-    task_name = "TimeSync_startup"
+    task_name = STARTUP_TASK_NAME
     cmd = f'schtasks /query /tn "{task_name}"'
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -411,6 +411,10 @@ def cmd_install():
 
 def cmd_uninstall():
     relaunch_as_admin()
+
+    if input("Are you sure you want to uninstall TimeSync? (y/n): ").lower() != "y":
+        print("Uninstallation cancelled.")
+        return
     
     print("🗑️ Starting uninstallation...")
     
@@ -429,7 +433,7 @@ def cmd_uninstall():
     if current_exe.parent == INSTALL_DIR:
         print("⏳ Cleaning up after exit...")
         # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
-        cmd_cleanup = f'timeout /t 2 /nobreak && rd /s /q "{INSTALL_DIR}"'
+        cmd_cleanup = f'timeout /t 7 /nobreak && rd /s /q "{INSTALL_DIR}"'
         subprocess.Popen(cmd_cleanup, shell=True)
         print("✅ Uninstallation scheduled. This window will close.")
         sys.exit(0)
