@@ -283,7 +283,7 @@ def remove_resume_task():
         print("❌ Resume task not found or already removed.")
 
 def startup_exists():
-    task_name = "TimeSyncStartup"
+    task_name = "TimeSync_startup"
     cmd = f'schtasks /query /tn "{task_name}"'
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -499,30 +499,46 @@ def first_run_installer():
     def menu(title, options):
         selected = 0
 
+        # نحفظ أول حرف لكل خيار (lowercase)
+        first_letters = [opt[0].lower() for opt in options]
+
         while True:
             clear()
             print(title)
             print()
 
             for i, option in enumerate(options):
-                if i == selected:
-                    print(f"> {option}")
-                else:
-                    print(f"  {option}")
+                prefix = ">" if i == selected else " "
+                print(f"{prefix} {i+1}. {option}")
 
             key = msvcrt.getch()
 
-            if key == b'\xe0':  # special key (arrows)
+            # الأسهم
+            if key == b'\xe0':
                 key = msvcrt.getch()
 
-                if key == b'H':  # up arrow
+                if key == b'H':      # up
                     selected = (selected - 1) % len(options)
 
-                elif key == b'P':  # down arrow
+                elif key == b'P':    # down
                     selected = (selected + 1) % len(options)
 
-            elif key == b'\r':  # Enter
+            # Enter
+            elif key == b'\r':
                 return selected
+
+            # أرقام
+            elif key.isdigit():
+                index = int(key) - 1
+                if 0 <= index < len(options):
+                    return index
+
+            # أول حرف
+            else:
+                char = key.decode(errors="ignore").lower()
+                if char in first_letters:
+                    selected = first_letters.index(char)
+                    return selected
 
     choice = menu("=== Windows Time Sync Tool ===\n\nThis program is not installed.\nYou can install it to use the 'timesync' command from any CMD, and you can set it to run automatically at Windows startup.\nPlease choose an option:", 
                   [
