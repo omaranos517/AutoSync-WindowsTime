@@ -447,9 +447,25 @@ def cmd_now():
 
 
 def cmd_status():
-    print("Admin:", is_admin())
-    print("In PATH:", is_in_path())
-    print("Startup with windows:", startup_exists())
+    print("\n=== TimeSync Status ===\n")
+
+    if is_admin():
+        print("🔐 Running as Administrator")
+    else:
+        print("⚠️  Not running as Administrator")
+
+    if is_in_path():
+        print("📌 Command available globally (you can use 'timesync' anywhere)")
+    else:
+        print("❌ Command not available globally (not added to PATH)")
+
+    if startup_exists():
+        print("🚀 Startup with Windows: Enabled")
+    else:
+        print("🚫 Startup with Windows: Disabled")
+
+    print()
+
 
 
 def cmd_startup_enable():
