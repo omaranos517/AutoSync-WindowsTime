@@ -606,9 +606,6 @@ def main():
     args = parser.parse_args()
 
     if args.command:
-        if not is_admin():
-            print("⚠️  Admin privileges required. Relaunch CMD/PowerShell as admin please...")
-            sys.exit(1)
         # تنفيذ الأوامر مباشرة
         if args.command == "uninstall":
             cmd_uninstall()
