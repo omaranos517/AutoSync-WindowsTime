@@ -247,7 +247,7 @@ def create_resume_task(executable_path: Path = None):
     if executable_path is None:
         executable_path = get_installed_exe_path()
 
-    task_name = "TimeSync_Resume"
+    task_name = "TimeSync_resume"
 
     cmd = (
         f'schtasks /create /tn "{task_name}" '
