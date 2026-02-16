@@ -484,8 +484,7 @@ def cmd_startup_disable():
 # FIRST RUN INSTALLER
 # ==================================================
 
-def first_run_installer():
-
+def first_run_installer():    
     if len(sys.argv) > 1:
         return  # command mode
 
@@ -493,34 +492,60 @@ def first_run_installer():
         cmd_now() # synchronize time on startup
         return  # already installed
 
-    print("""
-\n=== Windows Time Sync Tool ===\n
+    import msvcrt
+    def clear():
+        os.system("cls")
 
-This program is not installed.
-You can install it to use the 'timesync' command from any CMD, and you can set it to run automatically at Windows startup.
-Please choose an option:
+    def menu(title, options):
+        selected = 0
 
-1) Install
-2) Just Sync time now wothout installing
-3) Exit
-""")
+        while True:
+            clear()
+            print(title)
+            print()
 
-    choice = input("Choose: ").strip()
+            for i, option in enumerate(options):
+                if i == selected:
+                    print(f"> {option}")
+                else:
+                    print(f"  {option}")
 
-    if choice == "1":
+            key = msvcrt.getch()
+
+            if key == b'\xe0':  # special key (arrows)
+                key = msvcrt.getch()
+
+                if key == b'H':  # up arrow
+                    selected = (selected - 1) % len(options)
+
+                elif key == b'P':  # down arrow
+                    selected = (selected + 1) % len(options)
+
+            elif key == b'\r':  # Enter
+                return selected
+
+    choice = menu("=== Windows Time Sync Tool ===\n\nThis program is not installed.\nYou can install it to use the 'timesync' command from any CMD, and you can set it to run automatically at Windows startup.\nPlease choose an option:", 
+                  [
+                    "Install",
+                    "Just Sync time now without installing",
+                    "Exit"
+                  ]
+    )
+
+    if choice == 0:
         cmd_install()
         print("Installation completed.")
 
-        startup_choice = input(
-            "Run automatically with Windows startup? (y/n): "
-        ).lower().strip()
+        startup_choice = menu("Run automatically with Windows startup?", ["Yes", "No"])
 
-        if startup_choice == "y":
+        if startup_choice == 0:
             create_startup_task(get_installed_exe_path())
             print("✅ Startup shortcut created.")
             sleep(2)
-    
-    elif choice == "2":
+        else:
+            print("❌ Startup shortcut not created.")
+
+    elif choice == 1:
         cmd_now()
         print("Time synchronized without installation.")
         sleep(2)
