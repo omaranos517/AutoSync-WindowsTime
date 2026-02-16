@@ -564,6 +564,7 @@ def first_run_installer():
 
         if startup_choice == 0:
             create_startup_task(get_installed_exe_path())
+            create_resume_task(get_installed_exe_path())
             print("✅ Startup shortcut created.")
             sleep(2)
         else:
