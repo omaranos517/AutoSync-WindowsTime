@@ -12,9 +12,11 @@ from time import sleep
 
 APP_NAME = "TimeSync"
 INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
+RESUME_TASK_NAME = "TimeSync_resume"
+STARTUP_TASK_NAME = "TimeSync_startup"
+
 VERSION = "1.1.0"
 AUTHOR = "Omar Anoss"
-LICENSE = "MIT License"
 GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"
 
 # ==================================================
@@ -226,14 +228,14 @@ def create_startup_task(executable_path: Path = None):
         executable_path = get_installed_exe_path()
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
-    task_name = "TimeSync_startup"
+    task_name = STARTUP_TASK_NAME
 
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startupinfo.wShowWindow = 0
 
     cmd = (
-        f'schtasks /create /tn "{task_name}" /tr "\'{executable_path}\' now --auto" '
+        f'schtasks /create /tn "{task_name}" /tr "\\"{executable_path}\\" now --auto" '
         f'/sc onlogon /rl highest /f'
     )
     
@@ -247,23 +249,25 @@ def create_resume_task(executable_path: Path = None):
     if executable_path is None:
         executable_path = get_installed_exe_path()
 
-    task_name = "TimeSync_resume"
+    task_name = RESUME_TASK_NAME
 
     cmd = (
         f'schtasks /create /tn "{task_name}" '
-        f'/tr "\"{executable_path}\" now --auto" '
-        f'/sc onevent '
-        f'/ec System '
+        f'/tr "\\"{executable_path}\\" now --auto" '
+        f'/sc onevent /ec System '
         f'/mo "*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]" '
         f'/rl highest /f'
     )
 
-    subprocess.run(cmd, shell=True, check=True)
-    print("✅ Resume task created.")
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+        print("✅ Resume task created.")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to create resume task: {e}")
 
 
 def remove_startup_task():
-    task_name = "TimeSync_startup"
+    task_name = STARTUP_TASK_NAME
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
@@ -274,7 +278,7 @@ def remove_startup_task():
 
 
 def remove_resume_task():
-    task_name = "TimeSync_resume"
+    task_name = RESUME_TASK_NAME
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
