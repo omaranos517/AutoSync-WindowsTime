@@ -1,0 +1,27 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1,1,0,0),
+    prodvers=(1,1,0,0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x4,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0,0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',  # اللغة والانكويد (English US)
+        [StringStruct('CompanyName', 'Omar Anoss'),
+         StringStruct('FileDescription', 'Windows Time Synchronization Tool'),
+         StringStruct('FileVersion', '1.1.0.0'),
+         StringStruct('InternalName', 'TimeSync'),
+         StringStruct('LegalCopyright', '© 2026 Omar Anoss'),
+         StringStruct('OriginalFilename', 'TimeSync.exe'),
+         StringStruct('ProductName', 'TimeSync Tool'),
+         StringStruct('ProductVersion', '1.1.0.0')])
+    ]),
+    VarFileInfo([VarStruct('Translation', [0x0409, 1200])])
+  ]
+)
