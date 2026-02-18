@@ -15,12 +15,12 @@ VSVersionInfo(
         '040904B0',  # اللغة والانكويد (English US)
         [StringStruct('CompanyName', 'Omar Anoss'),
          StringStruct('FileDescription', 'Windows Time Synchronization Tool'),
-         StringStruct('FileVersion', '1.1.0'),
+         StringStruct('FileVersion', '1.2.0.0'),
          StringStruct('InternalName', 'TimeSync'),
          StringStruct('LegalCopyright', '© 2026 Omar Anoss'),
          StringStruct('OriginalFilename', 'TimeSync.exe'),
          StringStruct('ProductName', 'TimeSync Tool'),
-         StringStruct('ProductVersion', '1.1.0')])
+         StringStruct('ProductVersion', '1.2.0.0')])
     ]),
     VarFileInfo([VarStruct('Translation', [0x0409, 1200])])
   ]

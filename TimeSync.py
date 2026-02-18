@@ -9,15 +9,41 @@ from socket import create_connection
 from pathlib import Path
 from winotify import Notification, audio
 from time import sleep
+import json
 
 APP_NAME = "TimeSync"
 INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
 RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
+SETTINGS_FILE = INSTALL_DIR / "settings.json"
+CANCEL_FILE = INSTALL_DIR / "cancel.flag"
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 AUTHOR = "Omar Anoss"
 GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"
+
+
+# ==================================================
+# SETTINGS
+# ==================================================
+
+def load_settings():
+    default_settings = {"notifications": True}
+    if not SETTINGS_FILE.exists():
+        return default_settings
+    try:
+        with open(SETTINGS_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return default_settings
+
+def save_settings(settings):
+    try:
+        INSTALL_DIR.mkdir(parents=True, exist_ok=True)
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f)
+    except Exception as e:
+        print(f"❌ Failed to save settings: {e}")
 
 # ==================================================
 # ADMIN
@@ -98,6 +124,50 @@ def install_logic():
 
     print(f"✅ Successfully installed at {target_path}")
     print(f"🚀 You can now use '{APP_NAME.lower()}' in any CMD.")
+
+
+def uninstall_logic():
+    """
+    إلغاء تثبيت التطبيق عن طريق حزف جميع الملفات التي انشأها وقت التثبيت
+    """
+    relaunch_as_admin()
+    
+    if input("Are you sure you want to uninstall TimeSync? (y/n): ").lower() != "y":
+        print("Uninstallation cancelled.")
+        return
+    
+    print("🗑️ Starting uninstallation...")
+    
+    # 1. إزالة المهمة المجدولة (Startup)
+    remove_startup_task()
+    remove_resume_task()
+    
+    # 2. إزالة المسار من بيئة النظام (PATH)
+    remove_from_path()
+    
+    # 3. إعداد عملية مسح المجلد بالكامل
+    target_exe = get_installed_exe_path()
+    current_exe = get_current_exe_path()
+
+    # إذا كان المستخدم يشغل البرنامج من مكان التثبيت، لا يمكننا مسحه مباشرة
+    # سنقوم بإنشاء أمر CMD خارجي ينتظر إغلاق البرنامج ثم يمسح المجلد
+    if current_exe.parent == INSTALL_DIR:
+        print("⏳ Cleaning up after exit...")
+        # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
+        cmd_cleanup = f'timeout /t 7 /nobreak && rd /s /q "{INSTALL_DIR}"'
+        subprocess.Popen(cmd_cleanup, shell=True)
+        print("✅ Uninstallation scheduled. This window will close.")
+        sys.exit(0)
+    else:
+        # إذا كان المستخدم يشغله من مكان آخر (مثل Downloads)، يمكننا المسح فوراً
+        if INSTALL_DIR.exists():
+            try:
+                shutil.rmtree(INSTALL_DIR)
+                print(f"🗑️ Removed directory: {INSTALL_DIR}")
+            except Exception as e:
+                print(f"❌ Failed to remove directory: {e}")
+                
+    print("✅ Uninstalled successfully.")
 
 
 def add_to_system_path(path_to_add):
@@ -299,7 +369,11 @@ def startup_exists():
 # Notification
 # ==================================================
 
-def send_notification(title, message):
+def send_notification(title, message, actions=None):
+    settings = load_settings()
+    if not settings.get("notifications", True):
+        return
+
     try:
         notifier = Notification(
             app_id="TimeSync",
@@ -307,11 +381,16 @@ def send_notification(title, message):
             msg=message,
             duration="short"
         )
+
+        if actions:
+            for label, launch in actions:
+                notifier.add_actions(label=label, launch=launch)
+
         notifier.set_audio(audio.Default, loop=False)
         notifier.show()
-    except Exception as e:
-        ...
 
+    except:
+        pass
 
 # ==================================================
 # TIME SYNC CORE
@@ -345,12 +424,26 @@ def sync_windows_time():
 
             connection = False
             for i in range(60):
+
+                try:
+                    CANCEL_FILE.unlink()
+                    send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
+                    return
+                except FileNotFoundError:
+                    pass
+
                 if has_internet_connection():
                     connection = True
                     break
 
                 if i == 5:
-                    send_notification("No Internet Connection", "⏳ Waiting for internet connection to sync time...")
+                    send_notification(
+                        "No Internet Connection",
+                        "⏳ Waiting for internet connection...",
+                        actions=[
+                            ("Cancel", "timesync cancel")
+                        ]
+                    )
 
                 sleep(10)
             
@@ -393,7 +486,13 @@ def sync_windows_time():
                 print("✅ Time synchronized successfully.")
         else:
             if is_auto:
-                send_notification("Time Sync Failed", "❌ The time synchronization process failed.")
+                send_notification(
+                    "Time Sync Failed",
+                    "❌ Time sync failed.",
+                    actions=[
+                        ("Retry", "timesync now")
+                    ]
+                )
             else:
                 print(result.stderr)
 
@@ -404,6 +503,26 @@ def sync_windows_time():
 # COMMANDS
 # ==================================================
 
+def commands_list():
+    commands = {
+        "now":       "Sync time immediately",
+        "status":    "Show current status",
+        "startup":   "Enable/disable startup sync",
+        "resume":    "Enable/disable resume on wake",
+        "notify":    "Enable/disable notifications",
+        "uninstall": "Remove TimeSync from your PC",
+        "about":     "Show info about TimeSync",
+        "version":   "Show version"
+    }
+
+    max_len = max(len(cmd) for cmd in commands.keys()) + 2
+
+    print("\n=== TimeSync Commands ===\n")
+    for command, description in commands.items():
+        print(f"{command:<{max_len}} - {description}")
+
+    print("\nUse 'timesync <command> -h' for more info on each command.")
+
 def cmd_install():
     relaunch_as_admin()
     install_logic()
@@ -411,47 +530,18 @@ def cmd_install():
 
 def cmd_uninstall():
     relaunch_as_admin()
-
-    if input("Are you sure you want to uninstall TimeSync? (y/n): ").lower() != "y":
-        print("Uninstallation cancelled.")
-        return
-    
-    print("🗑️ Starting uninstallation...")
-    
-    # 1. إزالة المهمة المجدولة (Startup)
-    remove_startup_task()
-    
-    # 2. إزالة المسار من بيئة النظام (PATH)
-    remove_from_path()
-    
-    # 3. إعداد عملية مسح المجلد بالكامل
-    target_exe = get_installed_exe_path()
-    current_exe = get_current_exe_path()
-
-    # إذا كان المستخدم يشغل البرنامج من مكان التثبيت، لا يمكننا مسحه مباشرة
-    # سنقوم بإنشاء أمر CMD خارجي ينتظر إغلاق البرنامج ثم يمسح المجلد
-    if current_exe.parent == INSTALL_DIR:
-        print("⏳ Cleaning up after exit...")
-        # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
-        cmd_cleanup = f'timeout /t 7 /nobreak && rd /s /q "{INSTALL_DIR}"'
-        subprocess.Popen(cmd_cleanup, shell=True)
-        print("✅ Uninstallation scheduled. This window will close.")
-        sys.exit(0)
-    else:
-        # إذا كان المستخدم يشغله من مكان آخر (مثل Downloads)، يمكننا المسح فوراً
-        if INSTALL_DIR.exists():
-            try:
-                shutil.rmtree(INSTALL_DIR)
-                print(f"🗑️ Removed directory: {INSTALL_DIR}")
-            except Exception as e:
-                print(f"❌ Failed to remove directory: {e}")
-                
-    print("✅ Uninstalled successfully.")
+    uninstall_logic()
+    print("✅ Uninstalled successfully")
 
 
 def cmd_now():
     relaunch_as_admin()
     sync_windows_time()
+
+
+def cmd_cancel():
+    CANCEL_FILE.touch()
+    print("❌ Cancel request sent.")
 
 
 def cmd_status():
@@ -475,7 +565,6 @@ def cmd_status():
     print()
 
 
-
 def cmd_startup_enable():
     relaunch_as_admin()
     create_startup_task(get_installed_exe_path())
@@ -488,16 +577,44 @@ def cmd_startup_disable():
     remove_startup_task()
     print("❌ Startup disabled")
 
+def cmd_resume_enable():
+    relaunch_as_admin()
+    create_resume_task(get_installed_exe_path())
+    print("✅ Resume enabled")
+
+def cmd_resume_disable():
+    relaunch_as_admin()
+    remove_resume_task()
+    print("❌ Resume disabled")
+
+def cmd_about():
+    print(f"""
+╔══════════════════════════════════════════════╗
+║                  TimeSync Tool               ║
+╠══════════════════════════════════════════════╣
+║
+║  Version  : {VERSION}V
+║  Author   : {AUTHOR}
+║  GitHub   : {GITHUB}
+║
+╠══════════════════════════════════════════════╣
+║        Windows Time Synchronization Tool     ║
+╚══════════════════════════════════════════════╝
+""")
+
+def cmd_version():
+    print(f"TimeSync v{VERSION}")
+
 # ==================================================
 # FIRST RUN INSTALLER
 # ==================================================
 
-def first_run_installer():    
+def first_run_installer():
     if len(sys.argv) > 1:
         return  # command mode
 
     if is_in_path():
-        cmd_now() # synchronize time on startup
+        commands_list()
         return  # already installed
 
     import msvcrt
@@ -595,24 +712,41 @@ def main():
     now_parser = sub.add_parser("now")
     now_parser.add_argument("--auto", action="store_true", help="Delayed sync for startup")
 
+    sub.add_parser("cancel")
+
     sub.add_parser("status")
 
     startup = sub.add_parser("startup")
     startup_sub = startup.add_subparsers(dest="action")
 
+    startup_sub.add_parser("status")
     startup_sub.add_parser("enable")
     startup_sub.add_parser("disable")
 
     resume = sub.add_parser("resume")
     resume_sub = resume.add_subparsers(dest="action")
 
+    resume_sub.add_parser("status")
     resume_sub.add_parser("enable")
     resume_sub.add_parser("disable")
+
+    # إضافة قسم الإشعارات
+    notify = sub.add_parser("notify")
+    notify_sub = notify.add_subparsers(dest="action")
+
+    notify_sub.add_parser("status")
+    notify_sub.add_parser("enable")
+    notify_sub.add_parser("disable")
 
     sub.add_parser("about")
     sub.add_parser("version")
 
     args = parser.parse_args()
+
+    if "--auto" in sys.argv:
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)
 
     if args.command:
         # تنفيذ الأوامر مباشرة
@@ -620,39 +754,50 @@ def main():
             cmd_uninstall()
         elif args.command == "now":
             cmd_now()
+        elif args.command == "cancel":
+            cmd_cancel()
         elif args.command == "status":
             cmd_status()
         elif args.command == "startup":
-            if args.action == "enable":
+            if args.action == "status":
+                print("✅ startup enabled" if startup_exists() else "❌ startup disabled")
+            elif args.action == "enable":
                 cmd_startup_enable()
             elif args.action == "disable":
                 cmd_startup_disable()
             else:
                 parser.print_help()
+                commands_list()
         elif args.command == "resume":
+            if args.action == "status":
+                ...
             if args.action == "enable":
-                create_resume_task(get_installed_exe_path())
+                cmd_resume_enable()
             elif args.action == "disable":
-                remove_resume_task()
+                cmd_resume_disable()
             else:
                 parser.print_help()
-
+                commands_list()
+        elif args.command == "notify":
+            settings = load_settings()
+            if args.action == "status":
+                status = "Enabled" if settings.get("notifications", True) else "Disabled"
+                print(f"🔔 Notifications are: {status}")
+            elif args.action == "enable":
+                settings["notifications"] = True
+                save_settings(settings)
+                print("✅ Notifications enabled.")
+            elif args.action == "disable":
+                settings["notifications"] = False
+                save_settings(settings)
+                print("❌ Notifications disabled.")
+            else:
+                parser.print_help()
+                commands_list()
         elif args.command == "about":
-            print(f"""
-╔══════════════════════════════════════════════╗
-║                  TimeSync Tool               ║
-╠══════════════════════════════════════════════╣
-║
-║  Version  : {VERSION}V
-║  Author   : {AUTHOR}
-║  GitHub   : {GITHUB}
-║
-╠══════════════════════════════════════════════╣
-║        Windows Time Synchronization Tool     ║
-╚══════════════════════════════════════════════╝
-""")
+            cmd_about()
         elif args.command == "version":
-            print(f"TimeSync version {VERSION}V")
+            cmd_version()
     else:
         # إذا لم يتم تمرير أي args → run installer
         first_run_installer()
