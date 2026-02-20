@@ -508,7 +508,7 @@ def commands_list():
         "now":       "Sync time immediately",
         "status":    "Show current status",
         "startup":   "Enable/disable startup sync",
-        "resume":    "Enable/disable resume on wake",
+        "resume":    "Enable/disable resume on wake (Sleep/hibernate)",
         "notify":    "Enable/disable notifications",
         "uninstall": "Remove TimeSync from your PC",
         "about":     "Show info about TimeSync",
@@ -765,9 +765,6 @@ def main():
                 cmd_startup_enable()
             elif args.action == "disable":
                 cmd_startup_disable()
-            else:
-                parser.print_help()
-                commands_list()
         elif args.command == "resume":
             if args.action == "status":
                 ...
@@ -775,9 +772,6 @@ def main():
                 cmd_resume_enable()
             elif args.action == "disable":
                 cmd_resume_disable()
-            else:
-                parser.print_help()
-                commands_list()
         elif args.command == "notify":
             settings = load_settings()
             if args.action == "status":
@@ -791,9 +785,6 @@ def main():
                 settings["notifications"] = False
                 save_settings(settings)
                 print("❌ Notifications disabled.")
-            else:
-                parser.print_help()
-                commands_list()
         elif args.command == "about":
             cmd_about()
         elif args.command == "version":
