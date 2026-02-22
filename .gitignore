@@ -1,0 +1,7 @@
+env
+build
+dist
+*.spec
+__pycache__
+.idea
+.vscode

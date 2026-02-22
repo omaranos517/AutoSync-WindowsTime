@@ -46,9 +46,6 @@ This mismatch causes Windows to display the wrong time after rebooting from Linu
 - 🔔 **Native Windows Notifications**  
   Uses Windows Toast Notifications to inform you about sync status.
 
-- 🧹 **Clean Uninstall**  
-  Fully removes Registry entries, PATH modifications, and scheduled tasks.
-
 ---
 
 ## 🚀 Getting Started
@@ -119,12 +116,6 @@ Triggers an immediate hardware clock update using: `w32tm /resync`
   - `net`
   - `w32tm`
   - Windows Task Scheduler
-
-- 🔐 **Privacy First**  
-  No telemetry  
-  No tracking  
-  No data collection  
-  No external servers (except standard NTP time servers)
 
 ---
 

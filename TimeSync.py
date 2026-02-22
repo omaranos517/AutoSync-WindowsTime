@@ -12,9 +12,11 @@ from time import sleep
 import json
 
 APP_NAME = "TimeSync"
-INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
 RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
+
+INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
+
 SETTINGS_FILE = INSTALL_DIR / "settings.json"
 CANCEL_FILE = INSTALL_DIR / "cancel.flag"
 
@@ -28,7 +30,7 @@ GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"
 # ==================================================
 
 def load_settings():
-    default_settings = {"notifications": True}
+    default_settings = {"notifications": True, "show_warning_on_manual_sync": True}
     if not SETTINGS_FILE.exists():
         return default_settings
     try:
@@ -154,7 +156,7 @@ def uninstall_logic():
     if current_exe.parent == INSTALL_DIR:
         print("⏳ Cleaning up after exit...")
         # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
-        cmd_cleanup = f'timeout /t 7 /nobreak && rd /s /q "{INSTALL_DIR}"'
+        cmd_cleanup = f'timeout /t 3 /nobreak && rd /s /q "{INSTALL_DIR}"'
         subprocess.Popen(cmd_cleanup, shell=True)
         print("✅ Uninstallation scheduled. This window will close.")
         sys.exit(0)
@@ -315,6 +317,7 @@ def create_startup_task(executable_path: Path = None):
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to create task: {e}")
 
+
 def create_resume_task(executable_path: Path = None):
     if executable_path is None:
         executable_path = get_installed_exe_path()
@@ -356,8 +359,19 @@ def remove_resume_task():
     except subprocess.CalledProcessError:
         print("❌ Resume task not found or already removed.")
 
+
 def startup_exists():
     task_name = STARTUP_TASK_NAME
+    cmd = f'schtasks /query /tn "{task_name}"'
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        return task_name in result.stdout
+    except:
+        return False
+
+
+def resume_exists():
+    task_name = RESUME_TASK_NAME
     cmd = f'schtasks /query /tn "{task_name}"'
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -389,8 +403,10 @@ def send_notification(title, message, actions=None):
         notifier.set_audio(audio.Default, loop=False)
         notifier.show()
 
-    except:
-        pass
+    except Exception as e:
+        DESKTOP = Path.home() / "Desktop"
+        with open(DESKTOP / "notification_error.txt", "w") as f:
+            f.write(f"Failed to send notification: {title} - {message} - Error: {e}\n")
 
 # ==================================================
 # TIME SYNC CORE
@@ -406,6 +422,57 @@ def has_internet_connection():
     except OSError:
         pass
     return False
+
+
+def set_system_time(dt_utc):
+    class SYSTEMTIME(ctypes.Structure):
+        _fields_ = [
+            ("wYear", ctypes.c_ushort),
+            ("wMonth", ctypes.c_ushort),
+            ("wDayOfWeek", ctypes.c_ushort),
+            ("wDay", ctypes.c_ushort),
+            ("wHour", ctypes.c_ushort),
+            ("wMinute", ctypes.c_ushort),
+            ("wSecond", ctypes.c_ushort),
+            ("wMilliseconds", ctypes.c_ushort),
+        ]
+
+    system_time = SYSTEMTIME()
+    system_time.wYear = dt_utc.year
+    system_time.wMonth = dt_utc.month
+    system_time.wDay = dt_utc.day
+    system_time.wHour = dt_utc.hour
+    system_time.wMinute = dt_utc.minute
+    system_time.wSecond = dt_utc.second
+    system_time.wMilliseconds = int(dt_utc.microsecond / 1000)
+
+    ctypes.windll.kernel32.SetSystemTime(ctypes.byref(system_time))
+
+
+def manual_ntp_sync():
+    import ntplib
+    from datetime import datetime, timezone
+
+    peers = [
+        "time.google.com",
+        "pool.ntp.org",
+        "time.windows.com"
+    ]
+
+    client = ntplib.NTPClient()
+
+    for peer in peers:
+        try:
+            response = client.request(peer, version=3)
+            ntp_time = datetime.fromtimestamp(response.tx_time, timezone.utc)
+
+            set_system_time(ntp_time)
+            return True
+        except:
+            continue
+
+    return False
+
 
 def sync_windows_time():
     try:
@@ -485,16 +552,35 @@ def sync_windows_time():
             else:
                 print("✅ Time synchronized successfully.")
         else:
-            if is_auto:
-                send_notification(
-                    "Time Sync Failed",
-                    "❌ Time sync failed.",
-                    actions=[
-                        ("Retry", "timesync now")
-                    ]
-                )
+            manual_success = manual_ntp_sync()
+
+            if manual_success:
+                if is_auto:
+                    send_notification("Time Sync", "✅ Time synchronized manually.")
+
+                    # Show warning
+                    settings = load_settings()
+                    if settings.get("show_warning_on_manual_sync", True):
+                        send_notification(
+                                            "⚠️ Warning",
+                                            "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
+                                            actions=[
+                                                ("Don't show again", "timesync disable-warning")
+                                            ]
+                                        )
+                else:
+                    print("✅ Time synchronized manually (fallback mode).")
             else:
-                print(result.stderr)
+                if is_auto:
+                    send_notification(
+                        "Time Sync Failed",
+                        "❌ Time sync failed.",
+                        actions=[
+                            ("Retry", "timesync now")
+                        ]
+                    )
+                else:
+                    print(result.stderr)
 
     except Exception as e:
         print("❌ Error:", e)
@@ -540,8 +626,11 @@ def cmd_now():
 
 
 def cmd_cancel():
-    CANCEL_FILE.touch()
-    print("❌ Cancel request sent.")
+    try:
+        CANCEL_FILE.touch()
+        print("❌ Cancel request sent.")
+    except Exception as e:
+        print(f"❌ Failed to send cancel request: {e}")
 
 
 def cmd_status():
@@ -550,7 +639,7 @@ def cmd_status():
     if is_admin():
         print("🔐 Running as Administrator")
     else:
-        print("⚠️  Not running as Administrator")
+        print("⚠️ Not running as Administrator")
 
     if is_in_path():
         print("📌 Command available globally (you can use 'timesync' anywhere)")
@@ -713,6 +802,7 @@ def main():
     now_parser.add_argument("--auto", action="store_true", help="Delayed sync for startup")
 
     sub.add_parser("cancel")
+    sub.add_parser("disable-warning")
 
     sub.add_parser("status")
 
@@ -756,6 +846,10 @@ def main():
             cmd_now()
         elif args.command == "cancel":
             cmd_cancel()
+        elif args.command == "disable-warning":
+            settings = load_settings()
+            settings["show_warning_on_manual_sync"] = False
+            save_settings(settings)
         elif args.command == "status":
             cmd_status()
         elif args.command == "startup":
@@ -767,7 +861,7 @@ def main():
                 cmd_startup_disable()
         elif args.command == "resume":
             if args.action == "status":
-                ...
+                print("✅ resume (Sleep/Hibernate) enabled" if resume_exists() else "❌ resume disabled")
             if args.action == "enable":
                 cmd_resume_enable()
             elif args.action == "disable":
