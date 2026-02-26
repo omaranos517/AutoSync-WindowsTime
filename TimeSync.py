@@ -8,7 +8,7 @@ import winreg
 from socket import create_connection
 from pathlib import Path
 from winotify import Notification, audio
-from time import sleep
+from time import sleep, strftime
 import json
 
 APP_NAME = "TimeSync"
@@ -16,9 +16,12 @@ RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
 
 INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
+DATA_DIR = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / APP_NAME
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-SETTINGS_FILE = INSTALL_DIR / "settings.json"
-CANCEL_FILE = INSTALL_DIR / "cancel.flag"
+SETTINGS_FILE = DATA_DIR / "settings.json"
+CANCEL_FILE = DATA_DIR / "cancel.flag"
+LOG_FILE = DATA_DIR / f"{APP_NAME}.log"
 
 VERSION = "1.2.0"
 AUTHOR = "Omar Anoss"
@@ -45,7 +48,28 @@ def save_settings(settings):
         with open(SETTINGS_FILE, 'w') as f:
             json.dump(settings, f)
     except Exception as e:
-        print(f"❌ Failed to save settings: {e}")
+        log("ERROR", f"Failed to save settings: {e}", console=True)
+
+# ==================================================
+# LOGGING
+# ==================================================
+
+def log(level, message, console=False):
+    try:
+        log_entry = {
+            "type": level,
+            "message": message,
+            "datetime": strftime("%Y-%m-%d %H:%M:%S")
+        }
+        INSTALL_DIR.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            f.flush()
+    except Exception as e:
+        print(f"❌ Failed to write log: {e}")
+    
+    if console:
+        print(level + ": " + message)
 
 # ==================================================
 # ADMIN
@@ -60,6 +84,8 @@ def is_admin():
 def relaunch_as_admin():
     if is_admin():
         return
+
+    print("💡 Tip: Run Terminal in Administrator mode for the best experience! 💻")
     
     # تحضير المسار والوسائط بشكل صحيح
     executable = sys.executable
@@ -313,9 +339,10 @@ def create_startup_task(executable_path: Path = None):
     
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True, startupinfo=startupinfo)
-        print("✅ Startup task created in Task Scheduler (Admin Privileges)")
+        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=True)
+        
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to create task: {e}")
+        log("ERROR", f"Failed to create startup task: {e}", console=True)
 
 
 def create_resume_task(executable_path: Path = None):
@@ -334,9 +361,9 @@ def create_resume_task(executable_path: Path = None):
 
     try:
         subprocess.run(cmd, shell=True, check=True)
-        print("✅ Resume task created.")
+        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to create resume task: {e}")
+        log("ERROR", f"Failed to create resume task: {e}", console=True)
 
 
 def remove_startup_task():
@@ -345,9 +372,9 @@ def remove_startup_task():
     try:
         # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        print("✅ Startup task removed successfully.")
+        log("INFO", "Startup task removed successfully.", console=True)
     except subprocess.CalledProcessError:
-        print("❌ Startup task not found or already removed.")
+        log("ERROR", "Startup task not found or already removed.", console=True)
 
 
 def remove_resume_task():
@@ -355,9 +382,9 @@ def remove_resume_task():
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        print("✅ Resume task removed successfully.")
+        log("INFO", "Resume task removed successfully.", console=True)
     except subprocess.CalledProcessError:
-        print("❌ Resume task not found or already removed.")
+        log("ERROR", "Resume task not found or already removed.", console=True)
 
 
 def startup_exists():
@@ -404,9 +431,7 @@ def send_notification(title, message, actions=None):
         notifier.show()
 
     except Exception as e:
-        DESKTOP = Path.home() / "Desktop"
-        with open(DESKTOP / "notification_error.txt", "w") as f:
-            f.write(f"Failed to send notification: {title} - {message} - Error: {e}\n")
+        log("ERROR", f"Failed to send notification: {e}", console=True)
 
 # ==================================================
 # TIME SYNC CORE
@@ -420,7 +445,7 @@ def has_internet_connection():
         conn.close()
         return True
     except OSError:
-        pass
+        log("WARNING", "No internet connection detected.", console=True)
     return False
 
 
@@ -481,6 +506,7 @@ def sync_windows_time():
         if not is_auto:
             if not has_internet_connection():
                 print("❌ No internet connection. Please connect to the internet and try again.")
+                log("ERROR", "No internet connection detected in manual sync.", console=False)
                 return
             
             print("🔄 Syncing Windows time...\n")
@@ -495,6 +521,7 @@ def sync_windows_time():
                 try:
                     CANCEL_FILE.unlink()
                     send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
+                    log("INFO", "Time sync cancelled by user.", console=False)
                     return
                 except FileNotFoundError:
                     pass
@@ -516,6 +543,7 @@ def sync_windows_time():
             
             if not connection:
                 send_notification("No Internet Connection", "❌ No internet connection. Time sync failed.")
+                log("ERROR", "No internet connection detected in auto sync.", console=False)
                 return
                 
 
@@ -549,7 +577,9 @@ def sync_windows_time():
         if result.returncode == 0:
             if is_auto:
                 send_notification("Time Sync Success", "✅ Time synchronized successfully.")
+                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
             else:
+                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
                 print("✅ Time synchronized successfully.")
         else:
             manual_success = manual_ntp_sync()
@@ -568,6 +598,7 @@ def sync_windows_time():
                                                 ("Don't show again", "timesync disable-warning")
                                             ]
                                         )
+                        log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
                 else:
                     print("✅ Time synchronized manually (fallback mode).")
             else:
@@ -581,9 +612,10 @@ def sync_windows_time():
                     )
                 else:
                     print(result.stderr)
+                log("ERROR", f"Time sync failed: {result.stderr}", console=False)
 
     except Exception as e:
-        print("❌ Error:", e)
+        log("ERROR", f"Exception during time sync: {e}", console=True)
 
 # ==================================================
 # COMMANDS
@@ -630,28 +662,19 @@ def cmd_cancel():
         CANCEL_FILE.touch()
         print("❌ Cancel request sent.")
     except Exception as e:
-        print(f"❌ Failed to send cancel request: {e}")
+        log("ERROR", f"Failed to create cancel file: {e}", console=False)
 
 
 def cmd_status():
     print("\n=== TimeSync Status ===\n")
 
-    if is_admin():
-        print("🔐 Running as Administrator")
-    else:
-        print("⚠️ Not running as Administrator")
-
-    if is_in_path():
-        print("📌 Command available globally (you can use 'timesync' anywhere)")
-    else:
-        print("❌ Command not available globally (not added to PATH)")
-
-    if startup_exists():
-        print("🚀 Startup with Windows: Enabled")
-    else:
-        print("🚫 Startup with Windows: Disabled")
-
-    print()
+    print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
+    print("📌 Command available globally (you can use 'timesync' anywhere)" if is_in_path() else "❌ Command not available globally (not added to PATH)")
+    print("🚀 Startup with Windows: Enabled" if startup_exists() else "🚫 Startup with Windows: Disabled")    
+    print("💤 Resume on Wake: Enabled" if resume_exists() else "🚫 Resume on Wake: Disabled")
+    print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
+    print("\nFor more details, check the log file at:", LOG_FILE)
+    print("\n")
 
 
 def cmd_startup_enable():
@@ -706,6 +729,7 @@ def first_run_installer():
         commands_list()
         return  # already installed
 
+    relaunch_as_admin()
     import msvcrt
     def clear():
         os.system("cls")
