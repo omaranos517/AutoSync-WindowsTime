@@ -148,6 +148,18 @@ def install_logic():
     # 3. إضافة مجلد التثبيت للـ PATH
     add_to_system_path(str(INSTALL_DIR))
 
+    commands_to_wrap = {
+        "ts-cancel.bat": "cancel",
+        "ts-now.bat": "now",
+        "ts-disable-warning.bat": "disable-warning"
+    }
+    
+    for bat_name, cmd_arg in commands_to_wrap.items():
+        bat_path = INSTALL_DIR / bat_name
+        # نستخدم start لضمان تشغيلها بشكل منفصل
+        bat_content = f'@echo off\n"{target_path}" {cmd_arg}'
+        bat_path.write_text(bat_content)
+
     register_uninstall_info()
 
     print(f"✅ Successfully installed at {target_path}")
@@ -517,7 +529,6 @@ def sync_windows_time():
 
             connection = False
             for i in range(60):
-
                 try:
                     CANCEL_FILE.unlink()
                     send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
@@ -531,11 +542,12 @@ def sync_windows_time():
                     break
 
                 if i == 5:
+                    cancel_bat = str(INSTALL_DIR / "ts-cancel.bat")
                     send_notification(
                         "No Internet Connection",
                         "⏳ Waiting for internet connection...",
                         actions=[
-                            ("Cancel", "timesync cancel")
+                            ("Cancel", cancel_bat)
                         ]
                     )
 
@@ -591,11 +603,12 @@ def sync_windows_time():
                     # Show warning
                     settings = load_settings()
                     if settings.get("show_warning_on_manual_sync", True):
+                        disable_warning_bat = str(INSTALL_DIR / "ts-disable-warning.bat")
                         send_notification(
                                             "⚠️ Warning",
                                             "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
                                             actions=[
-                                                ("Don't show again", "timesync disable-warning")
+                                                ("Don't show again", disable_warning_bat)
                                             ]
                                         )
                         log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
@@ -603,11 +616,12 @@ def sync_windows_time():
                     print("✅ Time synchronized manually (fallback mode).")
             else:
                 if is_auto:
+                    retry_bat = str(INSTALL_DIR / "ts-now.bat")
                     send_notification(
                         "Time Sync Failed",
                         "❌ Time sync failed.",
                         actions=[
-                            ("Retry", "timesync now")
+                            ("Retry", retry_bat)
                         ]
                     )
                 else:
