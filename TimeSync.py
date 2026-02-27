@@ -661,6 +661,9 @@ def commands_list():
 
     print("\nUse 'timesync <command> -h' for more info on each command.")
 
+    if not is_admin():
+        print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
+
 def cmd_install():
     install_logic()
     print("✅ Installed successfully")
@@ -687,7 +690,7 @@ def cmd_status():
     print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
     print("📌 Command available globally (you can use 'timesync' anywhere)" if is_in_path() else "❌ Command not available globally (not added to PATH)")
     print("🚀 Startup with Windows: Enabled" if startup_exists() else "🚫 Startup with Windows: Disabled")    
-    print("💤 Resume on Wake: Enabled" if resume_exists() else "🚫 Resume on Wake: Disabled")
+    print("💤 Sync on Wake: Enabled" if resume_exists() else "🚫 Sync on Wake: Disabled")
     print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
