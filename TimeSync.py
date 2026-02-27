@@ -334,6 +334,8 @@ def get_app_path():
 # ==================================================
 
 def create_startup_task(executable_path: Path = None):
+    relaunch_as_admin()
+
     if executable_path is None:
         executable_path = get_installed_exe_path()
 
@@ -358,6 +360,8 @@ def create_startup_task(executable_path: Path = None):
 
 
 def create_resume_task(executable_path: Path = None):
+    relaunch_as_admin()
+
     if executable_path is None:
         executable_path = get_installed_exe_path()
 
@@ -379,6 +383,8 @@ def create_resume_task(executable_path: Path = None):
 
 
 def remove_startup_task():
+    relaunch_as_admin()
+
     task_name = STARTUP_TASK_NAME
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
@@ -390,6 +396,7 @@ def remove_startup_task():
 
 
 def remove_resume_task():
+    relaunch_as_admin()
     task_name = RESUME_TASK_NAME
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
@@ -512,6 +519,7 @@ def manual_ntp_sync():
 
 
 def sync_windows_time():
+    relaunch_as_admin()
     try:
         is_auto = "--auto" in sys.argv
 
@@ -529,13 +537,11 @@ def sync_windows_time():
 
             connection = False
             for i in range(60):
-                try:
+                if CANCEL_FILE.exists():
                     CANCEL_FILE.unlink()
                     send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
                     log("INFO", "Time sync cancelled by user.", console=False)
                     return
-                except FileNotFoundError:
-                    pass
 
                 if has_internet_connection():
                     connection = True
@@ -656,25 +662,21 @@ def commands_list():
     print("\nUse 'timesync <command> -h' for more info on each command.")
 
 def cmd_install():
-    relaunch_as_admin()
     install_logic()
     print("✅ Installed successfully")
 
 def cmd_uninstall():
-    relaunch_as_admin()
     uninstall_logic()
     print("✅ Uninstalled successfully")
 
 
 def cmd_now():
-    relaunch_as_admin()
     sync_windows_time()
 
 
 def cmd_cancel():
     try:
         CANCEL_FILE.touch()
-        print("❌ Cancel request sent.")
     except Exception as e:
         log("ERROR", f"Failed to create cancel file: {e}", console=False)
 
@@ -692,24 +694,20 @@ def cmd_status():
 
 
 def cmd_startup_enable():
-    relaunch_as_admin()
     create_startup_task(get_installed_exe_path())
     create_resume_task(get_installed_exe_path())
     print("✅ Startup enabled")
 
 
 def cmd_startup_disable():
-    relaunch_as_admin()
     remove_startup_task()
     print("❌ Startup disabled")
 
 def cmd_resume_enable():
-    relaunch_as_admin()
     create_resume_task(get_installed_exe_path())
     print("✅ Resume enabled")
 
 def cmd_resume_disable():
-    relaunch_as_admin()
     remove_resume_task()
     print("❌ Resume disabled")
 
