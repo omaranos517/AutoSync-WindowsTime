@@ -2,332 +2,15 @@ import subprocess
 import ctypes
 import os
 import sys
-import shutil
 import argparse
-import winreg
 from socket import create_connection
 from pathlib import Path
-from winotify import Notification, audio
-from time import sleep, strftime
-import json
-
-APP_NAME = "TimeSync"
-RESUME_TASK_NAME = "TimeSync_resume"
-STARTUP_TASK_NAME = "TimeSync_startup"
-
-INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
-DATA_DIR = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / APP_NAME
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-SETTINGS_FILE = DATA_DIR / "settings.json"
-CANCEL_FILE = DATA_DIR / "cancel.flag"
-LOG_FILE = DATA_DIR / f"{APP_NAME}.log"
-
-VERSION = "1.2.0"
-AUTHOR = "Omar Anoss"
-GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"
-
-
-# ==================================================
-# SETTINGS
-# ==================================================
-
-def load_settings():
-    default_settings = {"notifications": True, "show_warning_on_manual_sync": True}
-    if not SETTINGS_FILE.exists():
-        return default_settings
-    try:
-        with open(SETTINGS_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return default_settings
-
-def save_settings(settings):
-    try:
-        INSTALL_DIR.mkdir(parents=True, exist_ok=True)
-        with open(SETTINGS_FILE, 'w') as f:
-            json.dump(settings, f)
-    except Exception as e:
-        log("ERROR", f"Failed to save settings: {e}", console=True)
-
-# ==================================================
-# LOGGING
-# ==================================================
-
-def log(level, message, console=False):
-    try:
-        log_entry = {
-            "type": level,
-            "message": message,
-            "datetime": strftime("%Y-%m-%d %H:%M:%S")
-        }
-        INSTALL_DIR.mkdir(parents=True, exist_ok=True)
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-            f.flush()
-    except Exception as e:
-        print(f"❌ Failed to write log: {e}")
-    
-    if console:
-        print(level + ": " + message)
-
-# ==================================================
-# ADMIN
-# ==================================================
-
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-def relaunch_as_admin():
-    if is_admin():
-        return
-
-    print("💡 Tip: Run Terminal in Administrator mode for the best experience! 💻")
-    
-    # تحضير المسار والوسائط بشكل صحيح
-    executable = sys.executable
-    if getattr(sys, "frozen", False):
-        args = sys.argv[1:]
-    else:
-        args = sys.argv
-    
-    params = " ".join([f'"{arg}"' for arg in args])
-    
-    # تنفيذ كمسؤول
-    ctypes.windll.shell32.ShellExecuteW(
-        None, "runas", executable, params, None, 1
-    )
-    sys.exit(0)
-    
-    
-# ==================================================
-# PATH INSTALL
-# ==================================================
-
-def get_current_exe_path():
-    """مسار الملف الحالي الذي يعمل الآن"""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable)
-    return Path(__file__).resolve()
-
-def get_installed_exe_path():
-    """المسار الذي يجب أن يكون فيه الملف بعد التثبيت"""
-    return INSTALL_DIR / get_current_exe_path().name
-
-# ==================================================
-# INSTALLATION AND UNINSTALLATION LOGIC
-# ==================================================
-
-def install_logic():
-    """نقل الملف، إضافته للمسار، وإنشاء ملف تشغيل سريع"""
-    relaunch_as_admin()
-
-    current_path = get_current_exe_path()
-    target_path = get_installed_exe_path()
-
-    print(f"📂 Installing to: {INSTALL_DIR}...")
-
-    # 1. إنشاء المجلد ونقل الملف
-    try:
-        INSTALL_DIR.mkdir(parents=True, exist_ok=True)
-        # إذا كان الملف يعمل من نفس مكان التثبيت، لا تحاول نسخه
-        if current_path.parent != INSTALL_DIR:
-            shutil.copy2(current_path, target_path)
-    except Exception as e:
-        print(f"❌ Failed to copy files: {e}")
-        return
-
-    # 2. إنشاء ملف CLI wrapper (batch file) في مجلد التثبيت
-    # لكي يعمل أمر 'timesync' مباشرة
-    bat_content = f'@echo off\n"{target_path}" %*'
-    (INSTALL_DIR / "timesync.bat").write_text(bat_content)
-
-    # 3. إضافة مجلد التثبيت للـ PATH
-    add_to_system_path(str(INSTALL_DIR))
-
-    commands_to_wrap = {
-        "ts-cancel.bat": "cancel",
-        "ts-now.bat": "now",
-        "ts-disable-warning.bat": "disable-warning"
-    }
-    
-    for bat_name, cmd_arg in commands_to_wrap.items():
-        bat_path = INSTALL_DIR / bat_name
-        # نستخدم start لضمان تشغيلها بشكل منفصل
-        bat_content = f'@echo off\n"{target_path}" {cmd_arg}'
-        bat_path.write_text(bat_content)
-
-    register_uninstall_info()
-
-    print(f"✅ Successfully installed at {target_path}")
-    print(f"🚀 You can now use '{APP_NAME.lower()}' in any CMD.")
-
-
-def uninstall_logic():
-    """
-    إلغاء تثبيت التطبيق عن طريق حزف جميع الملفات التي انشأها وقت التثبيت
-    """
-    relaunch_as_admin()
-    
-    if input("Are you sure you want to uninstall TimeSync? (y/n): ").lower() != "y":
-        print("Uninstallation cancelled.")
-        return
-    
-    print("🗑️ Starting uninstallation...")
-    
-    # 1. إزالة المهمة المجدولة (Startup)
-    remove_startup_task()
-    remove_resume_task()
-    
-    # 2. إزالة المسار من بيئة النظام (PATH)
-    remove_from_path()
-    
-    # 3. إعداد عملية مسح المجلد بالكامل
-    target_exe = get_installed_exe_path()
-    current_exe = get_current_exe_path()
-
-    # إذا كان المستخدم يشغل البرنامج من مكان التثبيت، لا يمكننا مسحه مباشرة
-    # سنقوم بإنشاء أمر CMD خارجي ينتظر إغلاق البرنامج ثم يمسح المجلد
-    if current_exe.parent == INSTALL_DIR:
-        print("⏳ Cleaning up after exit...")
-        # أمر CMD يقوم بالانتظار لثانية ثم مسح المجلد بالكامل
-        cmd_cleanup = f'timeout /t 3 /nobreak && rd /s /q "{INSTALL_DIR}"'
-        subprocess.Popen(cmd_cleanup, shell=True)
-        print("✅ Uninstallation scheduled. This window will close.")
-        sys.exit(0)
-    else:
-        # إذا كان المستخدم يشغله من مكان آخر (مثل Downloads)، يمكننا المسح فوراً
-        if INSTALL_DIR.exists():
-            try:
-                shutil.rmtree(INSTALL_DIR)
-                print(f"🗑️ Removed directory: {INSTALL_DIR}")
-            except Exception as e:
-                print(f"❌ Failed to remove directory: {e}")
-                
-    print("✅ Uninstalled successfully.")
-
-
-def add_to_system_path(path_to_add):
-    reg_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
-    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path, 0, winreg.KEY_READ | winreg.KEY_WRITE) as key:
-        current_path, _ = winreg.QueryValueEx(key, "Path")
-        if path_to_add.lower() in current_path.lower():
-            return
-        
-        new_path = current_path.rstrip(';') + ";" + path_to_add
-        winreg.SetValueEx(key, "Path", 0, winreg.REG_EXPAND_SZ, new_path)
-
-    # إخبار الويندوز بتحديث البيئة فوراً
-    ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 0, 100, None)
-
-
-def get_folder_size_kb(folder: Path):
-    total = 0
-    for root, dirs, files in os.walk(folder):
-        for name in files:
-            try:
-                fp = Path(root) / name
-                total += fp.stat().st_size
-            except:
-                pass
-    return total // 1024
-
-
-def register_uninstall_info():
-    uninstall_key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync"
-    size_in_kb = get_folder_size_kb(INSTALL_DIR)
-
-    with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, uninstall_key_path) as key:
-        winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, APP_NAME)
-        winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, VERSION)
-        winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, AUTHOR)
-        winreg.SetValueEx(key, "EstimatedSize", 0, winreg.REG_DWORD, size_in_kb)
-        winreg.SetValueEx(key, "NoModify", 0, winreg.REG_DWORD, 1)
-        winreg.SetValueEx(key, "NoRepair", 0, winreg.REG_DWORD, 1)
-
-        winreg.SetValueEx(
-            key,
-            "UninstallString",
-            0,
-            winreg.REG_SZ,
-            f'"{get_installed_exe_path()}" uninstall'
-        )
-        winreg.SetValueEx(
-            key,
-            "InstallLocation",
-            0,
-            winreg.REG_SZ,
-            str(INSTALL_DIR)
-        )
-        winreg.SetValueEx(
-            key,
-            "DisplayIcon",
-            0,
-            winreg.REG_SZ,
-            str(get_installed_exe_path())
-        )
-
-
-def remove_from_path():
-    path_to_remove = str(INSTALL_DIR).rstrip("\\").lower()
-    reg_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
-
-    try:
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            reg_path,
-            0,
-            winreg.KEY_READ | winreg.KEY_WRITE
-        ) as key:
-
-            current_path, reg_type = winreg.QueryValueEx(key, "Path")
-
-            parts = [
-                p.rstrip("\\").strip()
-                for p in current_path.split(";")
-                if p.rstrip("\\").strip().lower() != path_to_remove
-            ]
-
-            new_path = ";".join(parts)
-
-            winreg.SetValueEx(key, "Path", 0, reg_type, new_path)
-
-        ctypes.windll.user32.SendMessageTimeoutW(
-            0xFFFF,
-            0x001A,
-            0,
-            "Environment",
-            0,
-            100,
-            None
-        )
-
-    except Exception as e:
-        print("PATH cleanup failed:", e)
-
-    try:
-        winreg.DeleteKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync"
-        )
-    except FileNotFoundError:
-        pass
-
-
-def is_in_path():
-    exe_dir = str(get_app_path().parent)
-    system_path = os.environ.get("PATH", "")
-    return exe_dir.lower() in system_path.lower()
-
-
-def get_app_path():
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable)
-    return Path(__file__).resolve()
-
+from time import sleep
+from admin import relaunch_as_admin, is_admin
+from settings import load_settings, save_settings
+from utils import send_notification, log
+from path_utils import is_in_path, get_installed_exe_path
+from config import INSTALL_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
 # ==================================================
 # STARTUP TASK (TASK SCHEDULER)
@@ -426,33 +109,6 @@ def resume_exists():
         return False
 
 # ==================================================
-# Notification
-# ==================================================
-
-def send_notification(title, message, actions=None):
-    settings = load_settings()
-    if not settings.get("notifications", True):
-        return
-
-    try:
-        notifier = Notification(
-            app_id="TimeSync",
-            title=title,
-            msg=message,
-            duration="short"
-        )
-
-        if actions:
-            for label, launch in actions:
-                notifier.add_actions(label=label, launch=launch)
-
-        notifier.set_audio(audio.Default, loop=False)
-        notifier.show()
-
-    except Exception as e:
-        log("ERROR", f"Failed to send notification: {e}", console=True)
-
-# ==================================================
 # TIME SYNC CORE
 # ==================================================
 
@@ -464,7 +120,7 @@ def has_internet_connection():
         conn.close()
         return True
     except OSError:
-        log("WARNING", "No internet connection detected.", console=True)
+        log("INFO", "No internet connection detected.", console=False)
     return False
 
 
@@ -615,7 +271,8 @@ def sync_windows_time():
                                             "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
                                             actions=[
                                                 ("Don't show again", disable_warning_bat)
-                                            ]
+                                            ],
+                                            warning=True
                                         )
                         log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
                 else:
@@ -665,10 +322,12 @@ def commands_list():
         print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
 
 def cmd_install():
+    from installation import install_logic
     install_logic()
     print("✅ Installed successfully")
 
 def cmd_uninstall():
+    from installation import uninstall_logic
     uninstall_logic()
     print("✅ Uninstalled successfully")
 
