@@ -1,4 +1,4 @@
-from config import SETTINGS_FILE, INSTALL_DIR
+from config import SETTINGS_FILE, APP_DIR
 import json
 
 def load_settings():
@@ -13,6 +13,6 @@ def load_settings():
 
 
 def save_settings(settings):
-    INSTALL_DIR.mkdir(parents=True, exist_ok=True)
+    APP_DIR.mkdir(parents=True, exist_ok=True)
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(settings, f)

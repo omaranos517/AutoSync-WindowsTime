@@ -1,6 +1,5 @@
 import subprocess
 import ctypes
-import os
 import sys
 import argparse
 from socket import create_connection
@@ -10,7 +9,7 @@ from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
 from path_utils import is_in_path, get_installed_exe_path
-from config import INSTALL_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
 # ==================================================
 # STARTUP TASK (TASK SCHEDULER)
@@ -204,7 +203,7 @@ def sync_windows_time():
                     break
 
                 if i == 5:
-                    cancel_bat = str(INSTALL_DIR / "ts-cancel.bat")
+                    cancel_bat = str(APP_DIR / "ts-cancel.bat")
                     send_notification(
                         "No Internet Connection",
                         "⏳ Waiting for internet connection...",
@@ -265,7 +264,7 @@ def sync_windows_time():
                     # Show warning
                     settings = load_settings()
                     if settings.get("show_warning_on_manual_sync", True):
-                        disable_warning_bat = str(INSTALL_DIR / "ts-disable-warning.bat")
+                        disable_warning_bat = str(APP_DIR / "ts-disable-warning.bat")
                         send_notification(
                                             "⚠️ Warning",
                                             "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
@@ -279,7 +278,7 @@ def sync_windows_time():
                     print("✅ Time synchronized manually (fallback mode).")
             else:
                 if is_auto:
-                    retry_bat = str(INSTALL_DIR / "ts-now.bat")
+                    retry_bat = str(APP_DIR / "ts-now.bat")
                     send_notification(
                         "Time Sync Failed",
                         "❌ Time sync failed.",
@@ -321,16 +320,6 @@ def commands_list():
     if not is_admin():
         print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
 
-def cmd_install():
-    from installation import install_logic
-    install_logic()
-    print("✅ Installed successfully")
-
-def cmd_uninstall():
-    from installation import uninstall_logic
-    uninstall_logic()
-    print("✅ Uninstalled successfully")
-
 
 def cmd_now():
     sync_windows_time()
@@ -351,6 +340,7 @@ def cmd_status():
     print("🚀 Startup with Windows: Enabled" if startup_exists() else "🚫 Startup with Windows: Disabled")    
     print("💤 Sync on Wake: Enabled" if resume_exists() else "🚫 Sync on Wake: Disabled")
     print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
+    print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
 
@@ -392,97 +382,6 @@ def cmd_version():
     print(f"TimeSync v{VERSION}")
 
 # ==================================================
-# FIRST RUN INSTALLER
-# ==================================================
-
-def first_run_installer():
-    if len(sys.argv) > 1:
-        return  # command mode
-
-    if is_in_path():
-        commands_list()
-        return  # already installed
-
-    relaunch_as_admin()
-    import msvcrt
-    def clear():
-        os.system("cls")
-
-    def menu(title, options):
-        selected = 0
-
-        # نحفظ أول حرف لكل خيار (lowercase)
-        first_letters = [opt[0].lower() for opt in options]
-
-        while True:
-            clear()
-            print(title)
-            print()
-
-            for i, option in enumerate(options):
-                prefix = ">" if i == selected else " "
-                print(f"{prefix} {i+1}. {option}")
-
-            key = msvcrt.getch()
-
-            # الأسهم
-            if key == b'\xe0':
-                key = msvcrt.getch()
-
-                if key == b'H':      # up
-                    selected = (selected - 1) % len(options)
-
-                elif key == b'P':    # down
-                    selected = (selected + 1) % len(options)
-
-            # Enter
-            elif key == b'\r':
-                return selected
-
-            # أرقام
-            elif key.isdigit():
-                index = int(key) - 1
-                if 0 <= index < len(options):
-                    return index
-
-            # أول حرف
-            else:
-                char = key.decode(errors="ignore").lower()
-                if char in first_letters:
-                    selected = first_letters.index(char)
-                    return selected
-
-    choice = menu("=== Windows Time Sync Tool ===\n\nThis program is not installed.\nYou can install it to use the 'timesync' command from any CMD, and you can set it to run automatically at Windows startup.\nPlease choose an option:", 
-                  [
-                    "Install",
-                    "Just Sync time now without installing",
-                    "Exit"
-                  ]
-    )
-
-    if choice == 0:
-        cmd_install()
-        print("Installation completed.")
-
-        startup_choice = menu("Run automatically with Windows startup?", ["Yes", "No"])
-
-        if startup_choice == 0:
-            create_startup_task(get_installed_exe_path())
-            create_resume_task(get_installed_exe_path())
-            print("✅ Startup shortcut created.")
-            sleep(2)
-        else:
-            print("❌ Startup shortcut not created.")
-
-    elif choice == 1:
-        cmd_now()
-        print("Time synchronized without installation.")
-        sleep(2)
-    else:
-        sys.exit(0)
-
-
-# ==================================================
 # MAIN FLOW
 # ==================================================
 
@@ -494,13 +393,14 @@ def main():
 
     sub = parser.add_subparsers(dest="command")
 
-    sub.add_parser("uninstall")
-
     now_parser = sub.add_parser("now")
     now_parser.add_argument("--auto", action="store_true", help="Delayed sync for startup")
 
     sub.add_parser("cancel")
     sub.add_parser("disable-warning")
+
+    sub.add_parser("help")
+    sub.add_parser("commands")
 
     sub.add_parser("status")
 
@@ -536,10 +436,17 @@ def main():
         if hwnd:
             ctypes.windll.user32.ShowWindow(hwnd, 0)
 
+    if len(sys.argv) == 1:
+        from gui import run_gui
+        print("🚀 Starting TimeSync in GUI mode...")
+        relaunch_as_admin()
+        run_gui()
+        return
+
     if args.command:
         # تنفيذ الأوامر مباشرة
-        if args.command == "uninstall":
-            cmd_uninstall()
+        if args.command in ["help", "commands"]:
+            commands_list()
         elif args.command == "now":
             cmd_now()
         elif args.command == "cancel":
@@ -582,8 +489,8 @@ def main():
         elif args.command == "version":
             cmd_version()
     else:
-        # إذا لم يتم تمرير أي args → run installer
-        first_run_installer()
+        parser.print_help()
+        print("\n\nUse 'timesync help' for more information.\n\n")
 
 
 if __name__ == "__main__":

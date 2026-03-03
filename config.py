@@ -1,11 +1,12 @@
 from pathlib import Path
 import os
+from sys import executable
 
 APP_NAME = "TimeSync"
 RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
 
-INSTALL_DIR = Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / APP_NAME
+APP_DIR = Path(executable).parent
 DATA_DIR = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / APP_NAME
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 

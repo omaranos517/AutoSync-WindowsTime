@@ -1,7 +1,9 @@
 env
 build
 dist
+output
 *.spec
 __pycache__
 .idea
 .vscode
+*.iss

@@ -1,7 +1,7 @@
 import sys
 import os
 from pathlib import Path
-from config import INSTALL_DIR
+from config import APP_DIR
 
 def get_current_exe_path():
     """مسار الملف الحالي الذي يعمل الآن"""
@@ -9,9 +9,10 @@ def get_current_exe_path():
         return Path(sys.executable)
     return Path(__file__).resolve()
 
+
 def get_installed_exe_path():
     """المسار الذي يجب أن يكون فيه الملف بعد التثبيت"""
-    return INSTALL_DIR / get_current_exe_path().name
+    return APP_DIR / get_current_exe_path().name
 
 
 def is_in_path():
