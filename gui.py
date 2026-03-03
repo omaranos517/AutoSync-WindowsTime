@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from config import APP_NAME, APP_DIR
 
 # إعداد المظهر العام
 ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
@@ -11,8 +12,10 @@ class TimeSyncGUI(ctk.CTk):
         self.logic = main_logic_functions
         
         # إعدادات النافذة
-        self.title("TimeSync Professional")
-        self.iconbitmap("icon.ico")
+        self.title(APP_NAME)
+        icon = APP_DIR / "icon.ico"
+        if icon.exists():
+            self.iconbitmap(icon)
         self.geometry("600x450")
         
         # إنشاء هيكل النافذة (Sidebar and Main Content)
