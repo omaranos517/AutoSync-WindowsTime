@@ -1,9 +1,12 @@
+.idea
+.vscode
+
 env
+__pycache__
+
 build
 dist
 output
+upx.exe
 *.spec
-__pycache__
-.idea
-.vscode
 *.iss

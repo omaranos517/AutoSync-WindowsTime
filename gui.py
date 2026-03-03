@@ -8,11 +8,11 @@ class TimeSyncGUI(ctk.CTk):
     def __init__(self, main_logic_functions):
         super().__init__()
         
-        # ربط الدوال من ملفك الرئيسي
         self.logic = main_logic_functions
         
         # إعدادات النافذة
         self.title("TimeSync Professional")
+        self.iconbitmap("icon.ico")
         self.geometry("600x450")
         
         # إنشاء هيكل النافذة (Sidebar and Main Content)
