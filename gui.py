@@ -15,7 +15,7 @@ class TimeSyncGUI(ctk.CTk):
         self.title(APP_NAME)
         icon = APP_DIR / "icon.ico"
         if icon.exists():
-            self.iconbitmap(icon)
+            self.iconbitmap(str(icon))
         self.geometry("600x450")
         
         # إنشاء هيكل النافذة (Sidebar and Main Content)
