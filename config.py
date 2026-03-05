@@ -3,6 +3,7 @@ import os
 from sys import executable
 
 APP_NAME = "TimeSync"
+APP_ID = "OmarAnoss.TimeSync"
 RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
 

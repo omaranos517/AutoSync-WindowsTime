@@ -2,6 +2,7 @@
 #define MyAppVersion "1.2.0"
 #define MyAppPublisher "Omar Anoss"
 #define MyAppExeName "timesync-gui.exe"
+#define MyAppUserModelID "OmarAnoss.TimeSync"
 
 [Setup]
 AppId={{F1A0C0F3-1234-4EAA-9999-ABCDE1234567}
@@ -30,7 +31,7 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup;
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "{#MyAppUserModelID}"
 
 [Code]
 // --- تعريف وظائف الويندوز لحل مشكلة Unknown identifier ---
