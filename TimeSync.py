@@ -9,7 +9,7 @@ from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
 from path_utils import is_in_path, get_installed_exe_path
-from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+from config import APP_DIR, APP_ID, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
 # ==================================================
 # STARTUP TASK (TASK SCHEDULER)
@@ -494,4 +494,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # Set the process AppUserModelID for proper notification grouping in Windows 10/11. This is especially important if the app is not installed in Program Files and doesn't have a proper installer that sets the AppUserModelID.
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+    except Exception as e:
+        log("WARNING", f"Failed to set process AppUserModelID: {e}", console=False)
+        
     main()
