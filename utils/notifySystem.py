@@ -1,5 +1,6 @@
 from winotify import Notification, audio
 from settings import load_settings
+from config import APP_DIR
 from . import log
 
 def send_notification(title, message, actions=None, warning=None):
@@ -11,6 +12,7 @@ def send_notification(title, message, actions=None, warning=None):
     try:
         notifier = Notification(
             app_id="TimeSync",
+            icon=str(APP_DIR / "icon.ico"),
             title=title,
             msg=message,
             duration="short"

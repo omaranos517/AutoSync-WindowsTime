@@ -8,19 +8,19 @@ AppId={{F1A0C0F3-1234-4EAA-9999-ABCDE1234567}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-SetupIconFile=icon.ico
+SetupIconFile={#SourcePath}\..\assets\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64
 DefaultDirName={pf}\TimeSync
 DefaultGroupName=TimeSync
-OutputDir=output
+OutputDir={#SourcePath}\..\output
 OutputBaseFilename=TimeSync_Setup
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
 
 [Files]
-Source: "dist\TimeSync\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "{#SourcePath}\..\dist\TimeSync\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Tasks]
 Name: "startup"; Description: "Run TimeSync at Windows startup"; Flags: checkedonce

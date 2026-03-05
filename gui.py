@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from config import APP_NAME, APP_DIR
+from config import APP_NAME, APP_DIR, VERSION
 
 # إعداد المظهر العام
 ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
@@ -25,6 +25,8 @@ class TimeSyncGUI(ctk.CTk):
         # --- Sidebar ---
         self.sidebar = ctk.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
+
+        self.sidebar.grid_rowconfigure(8, weight=1)
         
         self.logo_label = ctk.CTkLabel(self.sidebar, text="TimeSync", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -34,6 +36,14 @@ class TimeSyncGUI(ctk.CTk):
 
         self.status_label = ctk.CTkLabel(self.sidebar, text="Status: Ready", font=ctk.CTkFont(size=12))
         self.status_label.grid(row=7, column=0, padx=20, pady=20)
+
+        self.version_label = ctk.CTkLabel(
+            self.sidebar,
+            text=f"v{VERSION}",
+            font=ctk.CTkFont(size=11),
+            text_color="gray"
+        )
+        self.version_label.grid(row=9, column=0, pady=(0, 10))
 
         # --- Main Content ---
         self.main_frame = ctk.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
