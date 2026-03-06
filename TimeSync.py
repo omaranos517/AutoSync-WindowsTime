@@ -2,13 +2,12 @@ import subprocess
 import ctypes
 import sys
 import argparse
-from socket import create_connection
 from pathlib import Path
 from time import sleep
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
-from path_utils import is_in_path, get_installed_exe_path
+from path_utils import is_in_path, get_current_exe_path, get_gui_app_path
 from config import APP_DIR, APP_ID, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
 # ==================================================
@@ -19,7 +18,7 @@ def create_startup_task(executable_path: Path = None):
     relaunch_as_admin()
 
     if executable_path is None:
-        executable_path = get_installed_exe_path()
+        executable_path = get_gui_app_path()  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
     task_name = STARTUP_TASK_NAME
@@ -45,7 +44,7 @@ def create_resume_task(executable_path: Path = None):
     relaunch_as_admin()
 
     if executable_path is None:
-        executable_path = get_installed_exe_path()
+        executable_path = get_gui_app_path()
 
     task_name = RESUME_TASK_NAME
 
@@ -113,6 +112,8 @@ def resume_exists():
 
 def has_internet_connection():
     """تحقق مما إذا كان هناك اتصال بالإنترنت"""
+    
+    from socket import create_connection
     try:
         # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
         conn = create_connection(("8.8.8.8", 53), timeout=3)
@@ -346,8 +347,7 @@ def cmd_status():
 
 
 def cmd_startup_enable():
-    create_startup_task(get_installed_exe_path())
-    create_resume_task(get_installed_exe_path())
+    create_startup_task(get_gui_app_path())
     print("✅ Startup enabled")
 
 
@@ -356,7 +356,7 @@ def cmd_startup_disable():
     print("❌ Startup disabled")
 
 def cmd_resume_enable():
-    create_resume_task(get_installed_exe_path())
+    create_resume_task(get_gui_app_path())
     print("✅ Resume enabled")
 
 def cmd_resume_disable():

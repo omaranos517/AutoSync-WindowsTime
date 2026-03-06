@@ -17,6 +17,7 @@ class TimeSyncGUI(ctk.CTk):
         if icon.exists():
             self.iconbitmap(str(icon))
         self.geometry("600x450")
+        self.minsize(300, 200)
         
         # إنشاء هيكل النافذة (Sidebar and Main Content)
         self.grid_columnconfigure(1, weight=1)

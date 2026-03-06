@@ -8,7 +8,9 @@
 AppId={{F1A0C0F3-1234-4EAA-9999-ABCDE1234567}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} v{#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppSupportURL=https://github.com/omaranos517/AutoSync-WindowsTime
 SetupIconFile={#SourcePath}\..\assets\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64
@@ -16,7 +18,7 @@ DefaultDirName={pf}\TimeSync
 DefaultGroupName=TimeSync
 OutputDir={#SourcePath}\..\output
 OutputBaseFilename=TimeSync_Setup
-Compression=lzma
+Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
 
@@ -29,6 +31,7 @@ Name: "startup"; Description: "Run TimeSync at Windows startup"; Flags: checkedo
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch TimeSync"; Flags: nowait postinstall skipifsilent
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "{#MyAppUserModelID}"
