@@ -12,9 +12,9 @@ a = Analysis(
     datas=[
         (str(project_root / 'assets' / 'icon.ico'), '.'),
         (str(project_root / 'assets' / 'timesync.bat'), '.'),
-        (str(project_root / 'assets' / 'ts-now.bat'), '.'),
-        (str(project_root / 'assets' / 'ts-cancel.bat'), '.'),
-        (str(project_root / 'assets' / 'ts-disable-warning.bat'), '.'),
+        (str(project_root / 'assets' / 'ts-now.vbs'), '.'),
+        (str(project_root / 'assets' / 'ts-cancel.vbs'), '.'),
+        (str(project_root / 'assets' / 'ts-disable-warning.vbs'), '.'),
     ],
     hiddenimports=[],
     hookspath=[],

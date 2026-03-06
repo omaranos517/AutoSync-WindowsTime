@@ -203,12 +203,12 @@ def sync_windows_time():
                     break
 
                 if i == 5:
-                    cancel_bat = str(APP_DIR / "ts-cancel.bat")
+                    cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
                     send_notification(
                         "No Internet Connection",
                         "⏳ Waiting for internet connection...",
                         actions=[
-                            ("Cancel", cancel_bat)
+                            ("Cancel", cancel_vbs)
                         ]
                     )
 
