@@ -7,7 +7,6 @@ from time import sleep
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
-from path_utils import is_in_path, get_current_exe_path, get_gui_app_path
 from config import APP_DIR, APP_ID, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
 # ==================================================
@@ -18,7 +17,7 @@ def create_startup_task(executable_path: Path = None):
     relaunch_as_admin()
 
     if executable_path is None:
-        executable_path = get_gui_app_path()  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
+        executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
 
     # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
     task_name = STARTUP_TASK_NAME
@@ -44,7 +43,7 @@ def create_resume_task(executable_path: Path = None):
     relaunch_as_admin()
 
     if executable_path is None:
-        executable_path = get_gui_app_path()
+        executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for resume to provide a better user experience on wake. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during wake. This also allows us to show notifications if needed during resume sync.
 
     task_name = RESUME_TASK_NAME
 
@@ -337,7 +336,6 @@ def cmd_status():
     print("\n=== TimeSync Status ===\n")
 
     print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
-    print("📌 Command available globally (you can use 'timesync' anywhere)" if is_in_path() else "❌ Command not available globally (not added to PATH)")
     print("🚀 Startup with Windows: Enabled" if startup_exists() else "🚫 Startup with Windows: Disabled")    
     print("💤 Sync on Wake: Enabled" if resume_exists() else "🚫 Sync on Wake: Disabled")
     print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
@@ -347,7 +345,7 @@ def cmd_status():
 
 
 def cmd_startup_enable():
-    create_startup_task(get_gui_app_path())
+    create_startup_task(APP_DIR / "timesync-gui.exe")
     print("✅ Startup enabled")
 
 
@@ -356,12 +354,31 @@ def cmd_startup_disable():
     print("❌ Startup disabled")
 
 def cmd_resume_enable():
-    create_resume_task(get_gui_app_path())
+    create_resume_task(APP_DIR / "timesync-gui.exe")
     print("✅ Resume enabled")
 
 def cmd_resume_disable():
     remove_resume_task()
     print("❌ Resume disabled")
+
+def cmd_toggle_notify(action=None):
+    relaunch_as_admin()
+    settings = load_settings()
+    current = settings.get("notifications", True)
+    
+    if action == "enable":
+        settings["notifications"] = True
+    elif action == "disable":
+        settings["notifications"] = False
+    elif action == "status":
+        pass  # لا حاجة لتغيير الإعدادات، فقط عرض الحالة الحالية
+    else:
+        # toggle
+        settings["notifications"] = not current
+
+    save_settings(settings)
+    status = "enabled" if settings["notifications"] else "disabled"
+    print(f"🔔 Notifications {status}.")
 
 def cmd_about():
     print(f"""
@@ -437,7 +454,7 @@ def main():
             ctypes.windll.user32.ShowWindow(hwnd, 0)
 
     if len(sys.argv) == 1:
-        from gui import run_gui
+        from ui import run_gui
         print("🚀 Starting TimeSync in GUI mode...")
         relaunch_as_admin()
         run_gui()
@@ -472,18 +489,12 @@ def main():
             elif args.action == "disable":
                 cmd_resume_disable()
         elif args.command == "notify":
-            settings = load_settings()
             if args.action == "status":
-                status = "Enabled" if settings.get("notifications", True) else "Disabled"
-                print(f"🔔 Notifications are: {status}")
+                cmd_toggle_notify("status")
             elif args.action == "enable":
-                settings["notifications"] = True
-                save_settings(settings)
-                print("✅ Notifications enabled.")
+                cmd_toggle_notify(args.action)
             elif args.action == "disable":
-                settings["notifications"] = False
-                save_settings(settings)
-                print("❌ Notifications disabled.")
+                cmd_toggle_notify(args.action)
         elif args.command == "about":
             cmd_about()
         elif args.command == "version":
