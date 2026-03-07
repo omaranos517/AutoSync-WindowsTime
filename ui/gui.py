@@ -122,15 +122,15 @@ class TimeSyncGUI(ctk.CTk):
 
     def toggle_startup(self, switch):
         if switch.get():
-            self.logic['cmd_startup_enable']()
+            self.logic['cmd_toggle_startup']("enable")
         else:
-            self.logic['cmd_startup_disable']()
+            self.logic['cmd_toggle_startup']("disable")
 
     def toggle_resume(self, switch):
         if switch.get():
-            self.logic['cmd_resume_enable']()
+            self.logic['cmd_toggle_resume']("enable")
         else:
-            self.logic['cmd_resume_disable']()
+            self.logic['cmd_toggle_resume']("disable")
 
     def toggle_notifications(self, switch):
         if switch.get():
@@ -140,16 +140,14 @@ class TimeSyncGUI(ctk.CTk):
 
 def run_gui():
     # هنا نمرر الدوال من الكود الأصلي للواجهة
-    from TimeSync import cmd_now, cmd_startup_enable, cmd_startup_disable, startup_exists, resume_exists, cmd_resume_enable, cmd_resume_disable, cmd_toggle_notify, load_settings
+    from TimeSync import cmd_now, startup_exists, resume_exists, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, load_settings
     
     logic_map = {
         'cmd_now': cmd_now,
-        'cmd_startup_enable': cmd_startup_enable,
-        'cmd_startup_disable': cmd_startup_disable,
+        'cmd_toggle_startup': cmd_toggle_startup,
         'startup_exists': startup_exists,
         'resume_exists': resume_exists,
-        'cmd_resume_enable': cmd_resume_enable,
-        'cmd_resume_disable': cmd_resume_disable,
+        'cmd_toggle_resume': cmd_toggle_resume,
         'load_settings': load_settings,
         'cmd_toggle_notify': cmd_toggle_notify
     }

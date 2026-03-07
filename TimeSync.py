@@ -299,14 +299,15 @@ def sync_windows_time():
 
 def commands_list():
     commands = {
-        "now":       "Sync time immediately",
-        "status":    "Show current status",
-        "startup":   "Enable/disable startup sync",
-        "resume":    "Enable/disable resume on wake (Sleep/hibernate)",
-        "notify":    "Enable/disable notifications",
-        "uninstall": "Remove TimeSync from your PC",
-        "about":     "Show info about TimeSync",
-        "version":   "Show version"
+        "now":           "Sync time immediately",
+        "Commands/help": "Show Every available command",
+        "status":        "Show current status",
+        "startup":       "Enable/disable startup sync",
+        "resume":        "Enable/disable resume on wake (Sleep/hibernate)",
+        "notify":        "Enable/disable notifications",
+        "uninstall":     "Remove TimeSync from your PC",
+        "about":         "Show info about TimeSync",
+        "version":       "Show version"
     }
 
     max_len = max(len(cmd) for cmd in commands.keys()) + 2
@@ -321,8 +322,7 @@ def commands_list():
         print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
 
 
-def cmd_now():
-    sync_windows_time()
+def cmd_now(): sync_windows_time()
 
 
 def cmd_cancel():
@@ -343,23 +343,40 @@ def cmd_status():
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
 
+def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
+    if action == "enable":
+        enable_fn()
+    elif action == "disable":
+        disable_fn()
+    elif action == "status":
+        pass
+    else:  # toggle
+        if exists_fn():
+            disable_fn()
+        else:
+            enable_fn()
 
-def cmd_startup_enable():
-    create_startup_task(APP_DIR / "timesync-gui.exe")
-    print("✅ Startup enabled")
+    print(f"✅ {name} enabled" if exists_fn() else f"❌ {name} disabled")
+
+def cmd_toggle_startup(action=None):
+    toggle_feature(
+        action,
+        startup_exists,
+        lambda: create_startup_task(APP_DIR / "timesync-gui.exe"),
+        remove_startup_task,
+        "Startup"
+    )
 
 
-def cmd_startup_disable():
-    remove_startup_task()
-    print("❌ Startup disabled")
+def cmd_toggle_resume(action=None):
+    toggle_feature(
+        action,
+        resume_exists,
+        lambda: create_resume_task(APP_DIR / "timesync-gui.exe"),
+        remove_resume_task,
+        "Resume"
+    )
 
-def cmd_resume_enable():
-    create_resume_task(APP_DIR / "timesync-gui.exe")
-    print("✅ Resume enabled")
-
-def cmd_resume_disable():
-    remove_resume_task()
-    print("❌ Resume disabled")
 
 def cmd_toggle_notify(action=None):
     relaunch_as_admin()
@@ -370,15 +387,14 @@ def cmd_toggle_notify(action=None):
         settings["notifications"] = True
     elif action == "disable":
         settings["notifications"] = False
-    elif action == "status":
-        pass  # لا حاجة لتغيير الإعدادات، فقط عرض الحالة الحالية
-    else:
+    elif action != "status":
         # toggle
         settings["notifications"] = not current
 
     save_settings(settings)
     status = "enabled" if settings["notifications"] else "disabled"
     print(f"🔔 Notifications {status}.")
+
 
 def cmd_about():
     print(f"""
@@ -476,18 +492,18 @@ def main():
             cmd_status()
         elif args.command == "startup":
             if args.action == "status":
-                print("✅ startup enabled" if startup_exists() else "❌ startup disabled")
+                cmd_toggle_startup("status")
             elif args.action == "enable":
-                cmd_startup_enable()
+                cmd_toggle_startup("enable")
             elif args.action == "disable":
-                cmd_startup_disable()
+                cmd_toggle_startup("disable")
         elif args.command == "resume":
             if args.action == "status":
-                print("✅ resume (Sleep/Hibernate) enabled" if resume_exists() else "❌ resume disabled")
+                cmd_toggle_resume("status")
             if args.action == "enable":
-                cmd_resume_enable()
+                cmd_toggle_resume("enable")
             elif args.action == "disable":
-                cmd_resume_disable()
+                cmd_toggle_resume("disable")
         elif args.command == "notify":
             if args.action == "status":
                 cmd_toggle_notify("status")
