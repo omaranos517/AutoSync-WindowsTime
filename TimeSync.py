@@ -332,6 +332,13 @@ def cmd_cancel():
         log("ERROR", f"Failed to create cancel file: {e}", console=False)
 
 
+def cmd_disable_warning():
+    settings = load_settings()
+    settings["show_warning_on_manual_sync"] = False
+    save_settings(settings)
+    print("✅ Warning on manual sync has been disabled.")
+
+
 def cmd_status():
     print("\n=== TimeSync Status ===\n")
 
@@ -342,6 +349,7 @@ def cmd_status():
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
+
 
 def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
     if action == "enable":
@@ -357,6 +365,7 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
             enable_fn()
 
     print(f"✅ {name} enabled" if exists_fn() else f"❌ {name} disabled")
+
 
 def cmd_toggle_startup(action=None):
     toggle_feature(
@@ -411,8 +420,7 @@ def cmd_about():
 ╚══════════════════════════════════════════════╝
 """)
 
-def cmd_version():
-    print(f"TimeSync v{VERSION}")
+def cmd_version(): print(f"TimeSync v{VERSION}")
 
 # ==================================================
 # MAIN FLOW
@@ -474,47 +482,32 @@ def main():
         print("🚀 Starting TimeSync in GUI mode...")
         relaunch_as_admin()
         run_gui()
-        return
+        
+    commands = {
+        "cancel": cmd_cancel,
+        "disable-warning": cmd_disable_warning,
+        "help": commands_list,
+        "commands": commands_list,
+        "status": cmd_status,
+        "about": cmd_about,
+        "version": cmd_version
+    }
+
+    action_commands = {
+        "startup": cmd_toggle_startup,
+        "resume": cmd_toggle_resume,
+        "notify": cmd_toggle_notify
+    }
 
     if args.command:
-        # تنفيذ الأوامر مباشرة
-        if args.command in ["help", "commands"]:
-            commands_list()
-        elif args.command == "now":
+        if args.command == "now":
             cmd_now()
-        elif args.command == "cancel":
-            cmd_cancel()
-        elif args.command == "disable-warning":
-            settings = load_settings()
-            settings["show_warning_on_manual_sync"] = False
-            save_settings(settings)
-        elif args.command == "status":
-            cmd_status()
-        elif args.command == "startup":
-            if args.action == "status":
-                cmd_toggle_startup("status")
-            elif args.action == "enable":
-                cmd_toggle_startup("enable")
-            elif args.action == "disable":
-                cmd_toggle_startup("disable")
-        elif args.command == "resume":
-            if args.action == "status":
-                cmd_toggle_resume("status")
-            if args.action == "enable":
-                cmd_toggle_resume("enable")
-            elif args.action == "disable":
-                cmd_toggle_resume("disable")
-        elif args.command == "notify":
-            if args.action == "status":
-                cmd_toggle_notify("status")
-            elif args.action == "enable":
-                cmd_toggle_notify(args.action)
-            elif args.action == "disable":
-                cmd_toggle_notify(args.action)
-        elif args.command == "about":
-            cmd_about()
-        elif args.command == "version":
-            cmd_version()
+
+        elif args.command in commands:
+            commands[args.command]()
+
+        elif args.command in action_commands:
+            action_commands[args.command](args.action or "status")
     else:
         parser.print_help()
         print("\n\nUse 'timesync help' for more information.\n\n")
