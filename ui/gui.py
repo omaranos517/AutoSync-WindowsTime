@@ -1,4 +1,5 @@
 import os
+import threading
 import customtkinter as ctk
 
 from config import APP_NAME, APP_DIR, VERSION, LOG_FILE, STARTUP_TASK_NAME, RESUME_TASK_NAME
@@ -12,6 +13,7 @@ class TimeSyncGUI(ctk.CTk):
         super().__init__()
         
         self.logic = main_logic_functions
+        self.sync_in_progress = False
         
         # إعدادات النافذة
         self.title(APP_NAME)
@@ -100,13 +102,31 @@ class TimeSyncGUI(ctk.CTk):
 
     # --- Handlers (الربط مع المنطق الخاص بك) ---
     def handle_sync(self):
+        if self.sync_in_progress:
+            return
+
+        self.sync_in_progress = True
+        self.sync_button.configure(state="disabled")
         self.status_label.configure(text="Status: Syncing...", text_color="orange")
-        self.update()
+
+        sync_thread = threading.Thread(target=self._sync_worker, daemon=True)
+        sync_thread.start()
+
+    def _sync_worker(self):
         try:
-            self.logic['cmd_now']()
-            self.status_label.configure(text="Status: Success", text_color="green")
-        except:
-            self.status_label.configure(text="Status: Failed", text_color="red")
+            sync_result = bool(self.logic['cmd_now']())
+            if sync_result:
+                self.after(0, lambda: self.status_label.configure(text="Status: Success", text_color="green"))
+            else:
+                self.after(0, lambda: self.status_label.configure(text="Status: No internet / Failed", text_color="red"))
+        except Exception:
+            self.after(0, lambda: self.status_label.configure(text="Status: Failed", text_color="red"))
+        finally:
+            self.after(0, self._finish_sync)
+
+    def _finish_sync(self):
+        self.sync_in_progress = False
+        self.sync_button.configure(state="normal")
 
     def open_log_file(self):
         try:

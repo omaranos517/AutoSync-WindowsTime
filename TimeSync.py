@@ -231,6 +231,7 @@ def sync_windows_time(auto=False):
             else:
                 log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
                 print("✅ Time synchronized successfully.")
+            return True
         else:
             manual_success = manual_ntp_sync()
 
@@ -253,6 +254,7 @@ def sync_windows_time(auto=False):
                         log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
                 else:
                     print("✅ Time synchronized manually (fallback mode).")
+                return True
             else:
                 if auto:
                     retry_vbs = str(APP_DIR / "ts-now.vbs")
@@ -266,9 +268,11 @@ def sync_windows_time(auto=False):
                 else:
                     print(result.stderr)
                 log("ERROR", f"Time sync failed: {result.stderr}", console=False)
+                return False
 
     except Exception as e:
         log("ERROR", f"Exception during time sync: {e}", console=True)
+        return False
 
 # ==================================================
 # COMMANDS
@@ -302,9 +306,14 @@ def commands_list():
 def cmd_now():
     if "--auto" in sys.argv:
         if wait_for_internet():
-            sync_windows_time(auto=True)
+            return sync_windows_time(auto=True)
+        return False
     else:
-        sync_windows_time() if has_internet_connection() else print("❌ No internet connection. Please connect to the internet and try again.")
+        if has_internet_connection():
+            return sync_windows_time()
+
+        print("❌ No internet connection. Please connect to the internet and try again.")
+        return False
 
 
 def cmd_cancel():
@@ -370,7 +379,6 @@ def cmd_toggle_resume(action=None):
 
 
 def cmd_toggle_notify(action=None):
-    relaunch_as_admin()
     settings = load_settings()
     current = settings.get("notifications", True)
     

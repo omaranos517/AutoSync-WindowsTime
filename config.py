@@ -8,7 +8,7 @@ RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
 
 APP_DIR = Path(executable).parent
-DATA_DIR = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / APP_NAME
+DATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 SETTINGS_FILE = DATA_DIR / "settings.json"
