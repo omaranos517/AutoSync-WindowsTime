@@ -1,0 +1,4 @@
+customtkinter
+ntplib
+winotify
+pyinstaller
