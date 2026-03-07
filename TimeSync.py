@@ -264,12 +264,12 @@ def sync_windows_time():
                     # Show warning
                     settings = load_settings()
                     if settings.get("show_warning_on_manual_sync", True):
-                        disable_warning_bat = str(APP_DIR / "ts-disable-warning.bat")
+                        disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
                         send_notification(
                                             "⚠️ Warning",
                                             "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
                                             actions=[
-                                                ("Don't show again", disable_warning_bat)
+                                                ("Don't show again", disable_warning_vbs)
                                             ],
                                             warning=True
                                         )
@@ -278,12 +278,12 @@ def sync_windows_time():
                     print("✅ Time synchronized manually (fallback mode).")
             else:
                 if is_auto:
-                    retry_bat = str(APP_DIR / "ts-now.bat")
+                    retry_vbs = str(APP_DIR / "ts-now.vbs")
                     send_notification(
                         "Time Sync Failed",
                         "❌ Time sync failed.",
                         actions=[
-                            ("Retry", retry_bat)
+                            ("Retry", retry_vbs)
                         ]
                     )
                 else:

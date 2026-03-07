@@ -14,13 +14,14 @@ AppSupportURL=https://github.com/omaranos517/AutoSync-WindowsTime
 SetupIconFile={#SourcePath}\..\assets\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64
-DefaultDirName={pf}\TimeSync
+DefaultDirName={autopf}\TimeSync
 DefaultGroupName=TimeSync
 OutputDir={#SourcePath}\..\output
 OutputBaseFilename=TimeSync_Setup
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
+WizardStyle=modern dynamic
 
 [Files]
 Source: "{#SourcePath}\..\dist\TimeSync\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
