@@ -100,13 +100,11 @@ def task_exists(task_name):
 
 def has_internet_connection():
     """تحقق مما إذا كان هناك اتصال بالإنترنت"""
-    
     from socket import create_connection
     try:
         # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
-        conn = create_connection(("8.8.8.8", 53), timeout=3)
-        conn.close()
-        return True
+        with create_connection(("8.8.8.8", 53), timeout=3):
+            return True
     except OSError:
         log("INFO", "No internet connection detected.", console=False)
     return False
