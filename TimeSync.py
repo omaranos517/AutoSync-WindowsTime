@@ -3,6 +3,7 @@ import ctypes
 import sys
 import argparse
 from pathlib import Path
+
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
@@ -85,23 +86,12 @@ def remove_resume_task():
         log("ERROR", "Resume task not found or already removed.", console=True)
 
 
-def startup_exists():
-    task_name = STARTUP_TASK_NAME
+def task_exists(task_name):
     cmd = f'schtasks /query /tn "{task_name}"'
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         return task_name in result.stdout
-    except:
-        return False
-
-
-def resume_exists():
-    task_name = RESUME_TASK_NAME
-    cmd = f'schtasks /query /tn "{task_name}"'
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return task_name in result.stdout
-    except:
+    except Exception:
         return False
 
 # ==================================================
@@ -337,8 +327,8 @@ def cmd_status():
     print("\n=== TimeSync Status ===\n")
 
     print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
-    print("🚀 Startup with Windows: Enabled" if startup_exists() else "🚫 Startup with Windows: Disabled")    
-    print("💤 Sync on Wake: Enabled" if resume_exists() else "🚫 Sync on Wake: Disabled")
+    print("🚀 Startup with Windows: Enabled" if task_exists(STARTUP_TASK_NAME) else "🚫 Startup with Windows: Disabled")
+    print("💤 Sync on Wake: Enabled" if task_exists(RESUME_TASK_NAME) else "🚫 Sync on Wake: Disabled")
     print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
@@ -364,7 +354,7 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
 def cmd_toggle_startup(action=None):
     toggle_feature(
         action,
-        startup_exists,
+        lambda: task_exists(STARTUP_TASK_NAME),
         lambda: create_startup_task(APP_DIR / "timesync-gui.exe"),
         remove_startup_task,
         "Startup"
@@ -374,7 +364,7 @@ def cmd_toggle_startup(action=None):
 def cmd_toggle_resume(action=None):
     toggle_feature(
         action,
-        resume_exists,
+        lambda: task_exists(RESUME_TASK_NAME),
         lambda: create_resume_task(APP_DIR / "timesync-gui.exe"),
         remove_resume_task,
         "Resume"

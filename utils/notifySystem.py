@@ -1,7 +1,8 @@
 from winotify import Notification, audio
+
+from . import log
 from settings import load_settings
 from config import APP_ID
-from . import log
 
 def send_notification(title, message, actions=None, warning=None):
     settings = load_settings()

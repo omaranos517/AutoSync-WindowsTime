@@ -1,5 +1,6 @@
-from config import SETTINGS_FILE
 import json
+
+from config import SETTINGS_FILE
 
 def load_settings():
     default_settings = {"notifications": True, "show_warning_on_manual_sync": True}

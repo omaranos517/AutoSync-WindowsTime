@@ -1,12 +1,12 @@
 import customtkinter as ctk
-import webbrowser
+
 from config import APP_NAME, VERSION, AUTHOR, GITHUB
 
 
 def open_about_window(parent):
     about = ctk.CTkToplevel(parent)
     about.title("About")
-    about.geometry("460x360")
+    about.geometry("460x380")
     about.resizable(False, False)
     about.transient(parent)
     about.grab_set()
@@ -50,28 +50,21 @@ def open_about_window(parent):
     repo_label = ctk.CTkLabel(container, text="Project Repository", font=ctk.CTkFont(size=13, weight="bold"))
     repo_label.pack(anchor="w")
 
-    link_text = ctk.CTkTextbox(container, height=52, wrap="word")
-    link_text.insert("1.0", GITHUB)
-    link_text.configure(state="disabled")
-    link_text.pack(fill="x", pady=(2, 10))
+    def open_repo(_event=None):
+        import webbrowser
+        webbrowser.open(GITHUB, new=2)
 
-    actions = ctk.CTkFrame(container, fg_color="transparent")
-    actions.pack(fill="x", pady=(2, 0))
-    actions.grid_columnconfigure((0, 1, 2), weight=1)
-
-    open_repo_button = ctk.CTkButton(
-        actions,
-        text="Open on GitHub",
-        command=lambda: webbrowser.open(GITHUB, new=2)
+    link_label = ctk.CTkLabel(
+        container,
+        text=GITHUB,
+        text_color=("#1D4ED8", "#60A5FA"),
+        cursor="hand2",
+        font=ctk.CTkFont(size=12, underline=True),
+        anchor="w",
+        justify="left",
     )
-    open_repo_button.grid(row=0, column=0, padx=4, sticky="ew")
-
-    copy_repo_button = ctk.CTkButton(
-        actions,
-        text="Copy Link",
-        command=lambda: (about.clipboard_clear(), about.clipboard_append(GITHUB))
-    )
-    copy_repo_button.grid(row=0, column=1, padx=4, sticky="ew")
-
-    close_button = ctk.CTkButton(actions, text="Close", command=about.destroy)
-    close_button.grid(row=0, column=2, padx=4, sticky="ew")
+    link_label.pack(fill="x", pady=(2, 10))
+    link_label.bind("<Button-1>", open_repo)
+    
+    close_button = ctk.CTkButton(container, text="Close", command=about.destroy)
+    close_button.pack(pady=(0, 10))

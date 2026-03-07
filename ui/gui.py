@@ -1,6 +1,7 @@
-import customtkinter as ctk
 import os
-from config import APP_NAME, APP_DIR, VERSION, LOG_FILE
+import customtkinter as ctk
+
+from config import APP_NAME, APP_DIR, VERSION, LOG_FILE, STARTUP_TASK_NAME, RESUME_TASK_NAME
 
 # إعداد المظهر العام
 ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
@@ -50,7 +51,7 @@ class TimeSyncGUI(ctk.CTk):
             text_color="gray"
         )
         self.footer_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.footer_frame.grid(row=9, column=0, sticky="ew", padx=8, pady=(0, 8))
+        self.footer_frame.grid(row=9, column=0, sticky="sew", padx=0, pady=0)
         self.footer_frame.grid_columnconfigure(0, weight=1)
         self.footer_frame.grid_columnconfigure(1, weight=0)
 
@@ -68,7 +69,7 @@ class TimeSyncGUI(ctk.CTk):
             text_color="#202020",
             command=self.open_about_window
         )
-        self.about_button.grid(row=0, column=1, sticky="e")
+        self.about_button.grid(row=0, column=1, sticky="se")
 
         # --- Main Content ---
         self.main_frame = ctk.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
@@ -81,8 +82,8 @@ class TimeSyncGUI(ctk.CTk):
         settings = self.logic['load_settings']()
         notifications_enabled = settings.get("notifications", True)
 
-        self.create_setting_card("Run at Startup", self.logic['startup_exists'](), self.toggle_startup)
-        self.create_setting_card("Sync on Wake (Resume)", self.logic['resume_exists'](), self.toggle_resume)
+        self.create_setting_card("Run at Startup", self.logic['task_exists'](STARTUP_TASK_NAME), self.toggle_startup)
+        self.create_setting_card("Sync on Wake (Resume)", self.logic['task_exists'](RESUME_TASK_NAME), self.toggle_resume)
         self.create_setting_card("Show Notifications", notifications_enabled, self.toggle_notifications)
 
     def create_setting_card(self, text, initial_state, command):
@@ -140,13 +141,12 @@ class TimeSyncGUI(ctk.CTk):
 
 def run_gui():
     # هنا نمرر الدوال من الكود الأصلي للواجهة
-    from TimeSync import cmd_now, startup_exists, resume_exists, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, load_settings
+    from TimeSync import cmd_now, task_exists, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, load_settings
     
     logic_map = {
         'cmd_now': cmd_now,
         'cmd_toggle_startup': cmd_toggle_startup,
-        'startup_exists': startup_exists,
-        'resume_exists': resume_exists,
+        'task_exists': task_exists,
         'cmd_toggle_resume': cmd_toggle_resume,
         'load_settings': load_settings,
         'cmd_toggle_notify': cmd_toggle_notify

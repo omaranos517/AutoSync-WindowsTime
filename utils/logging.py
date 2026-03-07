@@ -1,6 +1,7 @@
-from config import LOG_FILE
 import json
 from time import strftime
+
+from config import LOG_FILE
 
 def log(level, message, console=False):
     try:
