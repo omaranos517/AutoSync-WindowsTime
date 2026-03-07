@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import os
 from config import APP_NAME, APP_DIR, VERSION, LOG_FILE
-from .about_window import open_about_window
 
 # إعداد المظهر العام
 ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
@@ -60,12 +59,12 @@ class TimeSyncGUI(ctk.CTk):
         self.about_button = ctk.CTkButton(
             self.footer_frame,
             text="ⓘ",
-            width=16,
+            width=15,
             height=16,
             corner_radius=8,
             font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color="#9A9A9A",
-            hover_color="#888888",
+            fg_color="#434343",
+            hover_color="#6C6C6C",
             text_color="#202020",
             command=self.open_about_window
         )
@@ -118,6 +117,7 @@ class TimeSyncGUI(ctk.CTk):
             self.status_label.configure(text="Status: Failed to open log", text_color="red")
 
     def open_about_window(self):
+        from .about_window import open_about_window
         open_about_window(self)
 
     def toggle_startup(self, switch):

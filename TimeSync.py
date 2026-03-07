@@ -476,6 +476,7 @@ def main():
         print("🚀 Starting TimeSync in GUI mode...")
         relaunch_as_admin()
         run_gui()
+        return
         
     commands = {
         "cancel": cmd_cancel,
