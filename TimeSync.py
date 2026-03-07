@@ -3,7 +3,6 @@ import ctypes
 import sys
 import argparse
 from pathlib import Path
-from time import sleep
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import send_notification, log
@@ -173,52 +172,42 @@ def manual_ntp_sync():
     return False
 
 
-def sync_windows_time():
+def wait_for_internet():
+    from time import sleep
+    for i in range(60): # 10 minutes max wait
+        if CANCEL_FILE.exists():
+            CANCEL_FILE.unlink(missing_ok=True)
+            send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
+            log("INFO", "Time sync cancelled by user.", console=False)
+            return False
+
+        if has_internet_connection():
+            return True
+
+        if i == 5:
+            cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
+            send_notification(
+                "No Internet Connection",
+                "⏳ Waiting for internet connection...",
+                actions=[
+                    ("Cancel", cancel_vbs)
+                ]
+            )
+
+        sleep(10)
+    
+    return False
+
+
+def sync_windows_time(auto=False):
     relaunch_as_admin()
     try:
-        is_auto = "--auto" in sys.argv
-
-        if not is_auto:
-            if not has_internet_connection():
-                print("❌ No internet connection. Please connect to the internet and try again.")
-                log("ERROR", "No internet connection detected in manual sync.", console=False)
-                return
-            
+        if not auto:
             print("🔄 Syncing Windows time...\n")
         else:
             hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
             if hwnd:
                 ctypes.windll.user32.ShowWindow(hwnd, 0) # إخفاء النافذة (0 تعني SW_HIDE)
-
-            connection = False
-            for i in range(60):
-                if CANCEL_FILE.exists():
-                    CANCEL_FILE.unlink()
-                    send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
-                    log("INFO", "Time sync cancelled by user.", console=False)
-                    return
-
-                if has_internet_connection():
-                    connection = True
-                    break
-
-                if i == 5:
-                    cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
-                    send_notification(
-                        "No Internet Connection",
-                        "⏳ Waiting for internet connection...",
-                        actions=[
-                            ("Cancel", cancel_vbs)
-                        ]
-                    )
-
-                sleep(10)
-            
-            if not connection:
-                send_notification("No Internet Connection", "❌ No internet connection. Time sync failed.")
-                log("ERROR", "No internet connection detected in auto sync.", console=False)
-                return
-                
 
         subprocess.run(
             "sc config w32time start= auto",
@@ -248,7 +237,7 @@ def sync_windows_time():
         )
 
         if result.returncode == 0:
-            if is_auto:
+            if auto:
                 send_notification("Time Sync Success", "✅ Time synchronized successfully.")
                 log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
             else:
@@ -258,7 +247,7 @@ def sync_windows_time():
             manual_success = manual_ntp_sync()
 
             if manual_success:
-                if is_auto:
+                if auto:
                     send_notification("Time Sync", "✅ Time synchronized manually.")
 
                     # Show warning
@@ -277,7 +266,7 @@ def sync_windows_time():
                 else:
                     print("✅ Time synchronized manually (fallback mode).")
             else:
-                if is_auto:
+                if auto:
                     retry_vbs = str(APP_DIR / "ts-now.vbs")
                     send_notification(
                         "Time Sync Failed",
@@ -322,7 +311,12 @@ def commands_list():
         print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
 
 
-def cmd_now(): sync_windows_time()
+def cmd_now():
+    if "--auto" in sys.argv:
+        if wait_for_internet():
+            sync_windows_time(auto=True)
+    else:
+        sync_windows_time() if has_internet_connection() else print("❌ No internet connection. Please connect to the internet and try again.")
 
 
 def cmd_cancel():
