@@ -35,6 +35,9 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup;
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch TimeSync"; Flags: nowait postinstall skipifsilent
 
+[Icons]
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "{#MyAppUserModelID}"
+
 [Code]
 #ifdef UNICODE
   #define AW "W"

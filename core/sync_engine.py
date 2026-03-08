@@ -2,9 +2,7 @@ import subprocess
 import ctypes
 
 from config import APP_DIR
-from settings import load_settings
 from admin import relaunch_as_admin
-from utils import log, send_notification
 
 from .internet_check import is_internet_available
 
@@ -51,16 +49,16 @@ def sync_windows_time() -> SyncResult:
         if result.returncode == 0:
             return SyncResult(success=True)
         else:
-            manual_success = manual_ntp_sync()
-
-            if manual_success:
-                disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
-                return SyncResult(success=True, warning="Time synchronized manually (fallback mode).", warning_actions=[("Don't show again", disable_warning_vbs)])
-            else:
-                return SyncResult(success=False, error="Failed to synchronize time.")
-
+            raise Exception("Failed to synchronize time using Windows Service.")
     except Exception as e:
-        return SyncResult(success=False, error="An error occurred during time synchronization.")
+    
+        manual_success = manual_ntp_sync()
+
+        if manual_success:
+            disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
+            return SyncResult(success=True, warning="Time synchronized manually (fallback mode).", warning_actions=[("Don't show again", disable_warning_vbs)])
+        else:
+            return SyncResult(success=False, error="Failed to synchronize time.")
 
 
 def set_system_time(dt_utc):
@@ -89,6 +87,7 @@ def set_system_time(dt_utc):
 
 
 def manual_ntp_sync():
+    print("⚠️  Windows Service synchronization failed. Trying to synchronize manually...\n")
     import ntplib
     from datetime import datetime, timezone
 
