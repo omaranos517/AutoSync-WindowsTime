@@ -39,7 +39,26 @@ def commands_list():
 def cmd_now():
     print("🔄 Syncing time now...")
     from core.sync_engine import check_internet_and_sync
-    return check_internet_and_sync(auto_sync="--auto" in sys.argv)
+    from utils import send_notification
+
+    result = check_internet_and_sync(auto_sync="--auto" in sys.argv)
+
+    if result.success:
+        print("✅ Time synchronized successfully!")
+        if "--auto" in sys.argv:
+            send_notification("Time Sync Success", "✅ Time synchronized successfully.")
+            log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
+        
+        if result.warning:
+            print(f"⚠️ Warning: {result.warning}")
+            send_notification("Time Sync Warning", f"⚠️ {result.warning}", actions=result.warning_actions)
+            log("SYNC_WARNING", result.warning, console=False)
+        return True
+    else:
+        print(f"❌ Time synchronization failed: {result.error}")
+        send_notification("Time Sync Failed", f"❌ Time synchronization failed: {result.error}")
+        log("SYNC_FAILED", f"Time synchronization failed: {result.error}", console=False)
+        return False
 
 
 def cmd_cancel():

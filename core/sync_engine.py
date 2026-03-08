@@ -8,16 +8,18 @@ from utils import log, send_notification
 
 from .internet_check import is_internet_available
 
+class SyncResult:
+    def __init__(self, success, warning=None, warning_actions=None, error=""):
+        self.success = success   # هل نجحت العملية؟ (True/False)
+        self.warning = warning
+        self.warning_actions = warning_actions if warning else []
+        self.error = error       # ما هو نص الخطأ لو فشلت؟
 
-def sync_windows_time(auto=False):
+
+def sync_windows_time() -> SyncResult:
     relaunch_as_admin()
     try:
-        if not auto:
-            print("🔄 Syncing Windows time started...\n")
-        else:
-            hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
-            if hwnd:
-                ctypes.windll.user32.ShowWindow(hwnd, 0) # إخفاء النافذة (0 تعني SW_HIDE)
+        print("🔄 Syncing Windows time started...\n")
 
         subprocess.run(
             "sc config w32time start= auto",
@@ -47,54 +49,18 @@ def sync_windows_time(auto=False):
         )
 
         if result.returncode == 0:
-            if auto:
-                send_notification("Time Sync Success", "✅ Time synchronized successfully.")
-                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
-            else:
-                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
-                print("✅ Time synchronized successfully.")
-            return True
+            return SyncResult(success=True)
         else:
             manual_success = manual_ntp_sync()
 
             if manual_success:
-                if auto:
-                    send_notification("Time Sync", "✅ Time synchronized manually.")
-
-                    # Show warning
-                    settings = load_settings()
-                    if settings.get("show_warning_on_manual_sync", True):
-                        disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
-                        send_notification(
-                                            "⚠️ Warning",
-                                            "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
-                                            actions=[
-                                                ("Don't show again", disable_warning_vbs)
-                                            ],
-                                            warning=True
-                                        )
-                        log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
-                else:
-                    print("✅ Time synchronized manually (fallback mode).")
-                return True
+                disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
+                return SyncResult(success=True, warning="Time synchronized manually (fallback mode).", warning_actions=[("Don't show again", disable_warning_vbs)])
             else:
-                if auto:
-                    retry_vbs = str(APP_DIR / "ts-now.vbs")
-                    send_notification(
-                        "Time Sync Failed",
-                        "❌ Time sync failed.",
-                        actions=[
-                            ("Retry", retry_vbs)
-                        ]
-                    )
-                else:
-                    print(result.stderr)
-                log("ERROR", f"Time sync failed: {result.stderr}", console=False)
-                return False
+                return SyncResult(success=False, error="Failed to synchronize time.")
 
     except Exception as e:
-        log("ERROR", f"Exception during time sync: {e}", console=True)
-        return False
+        return SyncResult(success=False, error="An error occurred during time synchronization.")
 
 
 def set_system_time(dt_utc):
@@ -149,6 +115,6 @@ def manual_ntp_sync():
 
 def check_internet_and_sync(auto_sync=True):
     if is_internet_available(auto_sync):
-        return sync_windows_time(auto=auto_sync)
+        return sync_windows_time()
     else: 
-        return False
+        return SyncResult(success=False, error="No internet connection available to synchronize time.")
