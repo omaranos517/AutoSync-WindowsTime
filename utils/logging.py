@@ -8,10 +8,13 @@ MAX_LOG_LINES = 100
 def log(level, message, console=False):
     try:
         lines = []
-        with open(LOG_FILE, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        while len(lines) >= MAX_LOG_LINES:
-            lines.pop(0)
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            while len(lines) >= MAX_LOG_LINES:
+                lines.pop(0)
+        except FileNotFoundError:
+            print("The first log entry is being created.")
 
         log_entry = {
             "type": level,
