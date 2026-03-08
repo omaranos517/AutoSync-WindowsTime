@@ -40,7 +40,7 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_button = ctk.CTkButton(self.sidebar, text="Sync Now", command=self.handle_sync)
         self.sync_button.grid(row=1, column=0, padx=20, pady=10)
 
-        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=self.open_log_file)
+        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=self.logic['cmd_logs'])
         self.open_log_button.grid(row=2, column=0, padx=20, pady=10)
 
         self.status_label = ctk.CTkLabel(self.sidebar, text="Status: Ready", font=ctk.CTkFont(size=12))
@@ -128,15 +128,6 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_in_progress = False
         self.sync_button.configure(state="normal")
 
-    def open_log_file(self):
-        try:
-            if not LOG_FILE.exists():
-                LOG_FILE.touch()
-            os.startfile(str(LOG_FILE))
-            self.status_label.configure(text="Status: Log opened", text_color="green")
-        except:
-            self.status_label.configure(text="Status: Failed to open log", text_color="red")
-
     def open_about_window(self):
         from .about_window import open_about_window
         open_about_window(self)
@@ -161,12 +152,13 @@ class TimeSyncGUI(ctk.CTk):
 
 def run_gui():
     # هنا نمرر الدوال من الكود الأصلي للواجهة
-    from main import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify
+    from main import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, cmd_logs
     from settings import load_settings
     from core.task_scheduler import task_exists
     
     logic_map = {
         'cmd_now': cmd_now,
+        'cmd_logs': cmd_logs,
         'cmd_toggle_startup': cmd_toggle_startup,
         'task_exists': task_exists,
         'cmd_toggle_resume': cmd_toggle_resume,

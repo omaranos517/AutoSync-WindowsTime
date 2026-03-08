@@ -1,4 +1,5 @@
 import ctypes
+import os
 import sys
 import argparse
 
@@ -19,7 +20,7 @@ def commands_list():
         "startup":       "Enable/disable startup sync",
         "resume":        "Enable/disable resume on wake (Sleep/hibernate)",
         "notify":        "Enable/disable notifications",
-        "uninstall":     "Remove TimeSync from your PC",
+        "logs":          "Open logs file",
         "about":         "Show info about TimeSync",
         "version":       "Show version"
     }
@@ -86,6 +87,17 @@ def cmd_status():
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
+
+
+def cmd_logs():
+    print("Logs file opening...")
+    try:
+        if LOG_FILE.exists():
+            os.startfile(LOG_FILE)
+        else:
+            print("No logs found.")
+    except Exception as e:
+        print(f"Failed to open logs: {e}")
 
 
 def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
@@ -175,6 +187,8 @@ def main():
     now_parser = sub.add_parser("now")
     now_parser.add_argument("--auto", action="store_true", help="Delayed sync for startup")
 
+    sub.add_parser("logs")
+
     sub.add_parser("cancel")
     sub.add_parser("disable-warning")
 
@@ -228,6 +242,7 @@ def main():
         "help": commands_list,
         "commands": commands_list,
         "status": cmd_status,
+        "logs": cmd_logs,
         "about": cmd_about,
         "version": cmd_version
     }
