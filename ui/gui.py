@@ -161,7 +161,7 @@ class TimeSyncGUI(ctk.CTk):
 
 def run_gui():
     # هنا نمرر الدوال من الكود الأصلي للواجهة
-    from TimeSync import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify
+    from main import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify
     from settings import load_settings
     from core.task_scheduler import task_exists
     

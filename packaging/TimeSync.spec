@@ -6,7 +6,7 @@ spec_dir = Path(globals().get("SPECPATH", Path.cwd()))
 project_root = spec_dir.parent
 
 a = Analysis(
-    [str(project_root / 'TimeSync.py')],
+    [str(project_root / 'main.py')],
     pathex=[str(project_root)],
     binaries=[],
     datas=[

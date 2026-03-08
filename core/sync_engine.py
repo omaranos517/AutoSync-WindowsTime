@@ -13,7 +13,7 @@ def sync_windows_time(auto=False):
     relaunch_as_admin()
     try:
         if not auto:
-            print("🔄 Syncing Windows time...\n")
+            print("🔄 Syncing Windows time started...\n")
         else:
             hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
             if hwnd:

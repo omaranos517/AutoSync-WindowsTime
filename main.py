@@ -37,9 +37,9 @@ def commands_list():
 
 
 def cmd_now():
+    print("🔄 Syncing time now...")
     from core.sync_engine import check_internet_and_sync
-    if "--auto" in sys.argv:
-        return check_internet_and_sync(auto_sync="--auto" in sys.argv)
+    return check_internet_and_sync(auto_sync="--auto" in sys.argv)
 
 
 def cmd_cancel():
