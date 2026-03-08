@@ -3,16 +3,27 @@ from time import strftime
 
 from config import LOG_FILE
 
+MAX_LOG_LINES = 100
+
 def log(level, message, console=False):
     try:
+        lines = []
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        while len(lines) >= MAX_LOG_LINES:
+            lines.pop(0)
+
         log_entry = {
             "type": level,
             "message": message,
             "datetime": strftime("%Y-%m-%d %H:%M:%S")
         }
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-            f.flush()
+
+        lines.append(json.dumps(log_entry, ensure_ascii=False) + "\n")
+        # إعادة كتابة كل السطور بعد القص
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+            
     except Exception as e:
         print(f"❌ Failed to write log: {e}")
     

@@ -16,6 +16,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64
 DefaultDirName={autopf}\TimeSync
 DefaultGroupName=TimeSync
+ChangesEnvironment=yes
 OutputDir={#SourcePath}\..\output
 OutputBaseFilename=TimeSync_Setup
 Compression=lzma2
@@ -34,11 +35,7 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup;
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch TimeSync"; Flags: nowait postinstall skipifsilent
 
-[Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; AppUserModelID: "{#MyAppUserModelID}"
-
 [Code]
-// --- تعريف وظائف الويندوز لحل مشكلة Unknown identifier ---
 #ifdef UNICODE
   #define AW "W"
 #else
@@ -49,7 +46,7 @@ type
   WPARAM = UINT_PTR;
   LPARAM = INT_PTR;
 
-function SendMessageTimeout(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: PAnsiChar; fuFlags: UINT; uTimeout: UINT; var lpdwResult: DWORD): Longint;
+function SendMessageTimeout(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: String; fuFlags: UINT; uTimeout: UINT; var lpdwResult: DWORD): Longint;
   external 'SendMessageTimeout{#AW}@user32.dll stdcall';
 
 const
@@ -58,33 +55,64 @@ const
 
 procedure AddToPath();
 var
-  OldPath: string;
-  NewPath: string;
+  OldPath, NewPath: string;
   ResultCode: DWORD;
+  AppPath: string;
 begin
-  // جلب المسار الحالي من الريجستري
-  if RegQueryStringValue(HKEY_LOCAL_MACHINE,
-     'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-     'Path', OldPath) then
+  AppPath := ExpandConstant('{app}');
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', 'Path', OldPath) then
   begin
-    // التحقق مما إذا كان المسار موجوداً مسبقاً (تجاهل حالة الأحرف)
-    if Pos(Uppercase(ExpandConstant('{app}')), Uppercase(OldPath)) = 0 then
+    if Pos(';' + Uppercase(AppPath) + ';', ';' + Uppercase(OldPath) + ';') = 0 then
     begin
       NewPath := OldPath;
       if (Length(NewPath) > 0) and (NewPath[Length(NewPath)] <> ';') then
         NewPath := NewPath + ';';
       
-      NewPath := NewPath + ExpandConstant('{app}');
+      NewPath := NewPath + AppPath;
 
-      // كتابة المسار الجديد
-      if RegWriteStringValue(HKEY_LOCAL_MACHINE,
-        'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-        'Path', NewPath) then
+      if RegWriteStringValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', 'Path', NewPath) then
       begin
-        // إبلاغ النظام بتحديث المتغيرات
         SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment', SMTO_ABORTIFHUNG, 5000, ResultCode);
       end;
     end;
+  end;
+end;
+
+
+procedure RemoveFromPath();
+var
+  OldPath, NewPath: string;
+  AppPath: string;
+  P: Integer;
+  ResultCode: DWORD;
+begin
+  AppPath := ExpandConstant('{app}');
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', 'Path', OldPath) then
+  begin
+    P := Pos(';' + Uppercase(AppPath), ';' + Uppercase(OldPath));
+    if P > 0 then
+    begin
+      NewPath := OldPath;
+      StringChangeEx(NewPath, AppPath + ';', '', True);
+      StringChangeEx(NewPath, AppPath, '', True);
+      
+      StringChangeEx(NewPath, ';;', ';', True);
+
+      if RegWriteStringValue(HKEY_LOCAL_MACHINE, 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', 'Path', NewPath) then
+      begin
+        SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment', SMTO_ABORTIFHUNG, 5000, ResultCode);
+      end;
+    end;
+  end;
+end;
+
+procedure InitializeWizard();
+begin
+  if RegKeyExists(HKEY_LOCAL_MACHINE,
+    'Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync') then
+  begin
+    RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\TimeSync');
   end;
 end;
 
@@ -93,6 +121,25 @@ begin
   if CurStep = ssPostInstall then
   begin
     AddToPath();
-    MsgBox('✅ Successfully installed' + #13#10 + '🚀 You can now use timesync in any Terminal.', mbInformation, MB_OK);
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+     RemoveFromPath();
+  end;
+
+  if CurUninstallStep = usPostUninstall then
+  begin
+    if DirExists(ExpandConstant('{localappdata}\TimeSync')) then
+    begin
+      if MsgBox('Do you want to delete settings and log files?' + #13#10 + '(This will remove your history and preferences)', 
+                mbConfirmation, MB_YESNO) = IDYES then
+      begin
+        DelTree(ExpandConstant('{localappdata}\{#MyAppName}'), True, True, True);
+      end;
+    end;
   end;
 end;

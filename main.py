@@ -46,9 +46,10 @@ def cmd_now():
 
     if result.success:
         print("✅ Time synchronized successfully!")
+        log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
+        
         if "--auto" in sys.argv:
             send_notification("Time Sync Success", "✅ Time synchronized successfully.")
-            log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
         
         if result.warning:
             print(f"⚠️ Warning: {result.warning}")
