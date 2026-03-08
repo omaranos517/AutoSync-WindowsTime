@@ -1,3 +1,7 @@
+<p align="right">
+    <img height="70" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" />
+</p>
+
 # 🕒 TimeSync
 
 **The definitive solution for Windows time desynchronization.**  
@@ -52,32 +56,60 @@ This mismatch causes Windows to display the wrong time after rebooting from Linu
 
 ### 🔧 Installation
 
-1. Download the latest `TimeSync.exe`
-2. Run the file
-3. On first launch, choose **Install**
+1. Download the latest installer from Releases (`TimeSync_<version>_Setup.exe`).
+2. Run the installer as Administrator and complete the setup wizard.
+3. (Optional) Keep **Run TimeSync at Windows startup** enabled during setup.
 
-The installer will: 
+The installer will:
 
-- Move the application to: `C:\Program Files\TimeSync`
-- Add the directory to your **System PATH**
-- Enable the `timesync` command globally
-- Optionally configure automatic startup synchronization
+- Install TimeSync to `C:\Program Files\TimeSync`
+- Add the install directory to the system `PATH`
+- Register the app in Windows Apps & Features
+- Optionally enable:
+  - Startup sync task
+  - Resume-from-sleep sync task
 
 ---
 
 ## 💻 Usage
 
+### GUI Mode
+
+- Open **TimeSync** from the Start Menu, or run `timesync` with no arguments.
+- Use the GUI to:
+  - Sync immediately
+  - Enable/disable Startup sync
+  - Enable/disable Sync on Wake (Resume)
+  - Enable/disable Notifications
+  - Open the log file
+
+### CLI Mode
+
 Open **CMD** or **PowerShell** and use:
 
 | Command | Description |
 |----------|------------|
-| `timesync now` | Sync time immediately (Manual mode) |
-| `timesync now --auto` | Used internally for background startup sync |
-| `timesync status` | Check Admin rights, PATH status, and Startup task |
-| `timesync startup enable` | Enable auto-sync at every Windows login |
-| `timesync startup disable` | Disable startup auto-sync |
-| `timesync about` | View version and author information |
-| `timesync uninstall` | Completely remove the app and clean Registry/PATH |
+| `timesync help` / `timesync commands` | Show all available commands |
+| `timesync now` | Sync time immediately |
+| `timesync status` | Show admin, startup, resume, and notification status |
+| `timesync startup status` | Check startup sync task status |
+| `timesync startup enable` | Enable sync at Windows login |
+| `timesync startup disable` | Disable sync at Windows login |
+| `timesync resume status` | Check sync-on-wake task status |
+| `timesync resume enable` | Enable sync after sleep/hibernate wake |
+| `timesync resume disable` | Disable sync after sleep/hibernate wake |
+| `timesync notify status` | Check notification status |
+| `timesync notify enable` | Enable desktop notifications |
+| `timesync notify disable` | Disable desktop notifications |
+| `timesync logs` | Open the log file |
+| `timesync about` | Show app information |
+| `timesync version` | Show current version |
+
+Advanced/internal commands:
+
+- `timesync now --auto` (used by scheduled tasks)
+- `timesync cancel`
+- `timesync disable-warning`
 
 ---
 
