@@ -5,7 +5,7 @@ from config import APP_NAME, VERSION, AUTHOR, GITHUB
 
 def open_about_window(parent):
     about = ctk.CTkToplevel(parent)
-    about.title("About")
+    about.title(f"About - {APP_NAME}")
     about.geometry("460x380")
     about.resizable(False, False)
     about.transient(parent)

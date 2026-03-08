@@ -1,0 +1,66 @@
+from socket import create_connection
+
+from utils import log, send_notification
+from config import APP_DIR, CANCEL_FILE
+
+
+def has_internet_connection():
+    """تحقق مما إذا كان هناك اتصال بالإنترنت"""
+    try:
+        # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
+        with create_connection(("8.8.8.8", 53), timeout=3):
+            return True
+    except OSError:
+        log("INFO", "No internet connection detected.", console=False)
+    return False
+
+
+def wait_for_internet():
+    from time import sleep
+    for i in range(60): # 10 minutes max wait
+        if CANCEL_FILE.exists():
+            CANCEL_FILE.unlink(missing_ok=True)
+            send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
+            log("INFO", "Time sync cancelled by user.", console=False)
+            return False
+
+        if has_internet_connection():
+            return True
+
+        if i == 5:
+            cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
+            send_notification(
+                "No Internet Connection",
+                "⏳ Waiting for internet connection...",
+                actions=[
+                    ("Cancel", cancel_vbs)
+                ]
+            )
+
+        sleep(10)
+    
+    return False
+
+
+def is_internet_available(auto_sync=True):
+    """
+    التحقق من الإنترنت:
+    - يعود بـ True فوراً إذا وجد اتصال.
+    - في الوضع التلقائي (auto): ينتظر الاتصال ويعود بالنتيجة.
+    - في الوضع اليدوي: يعود بـ False فوراً مع تسجيل Log.
+    """
+    # 1. تحقق سريع: إذا كان الإنترنت متاحاً الآن، اخرج بـ True
+    if has_internet_connection():
+        return True
+
+    # 2. إذا لم يتوفر إنترنت، نحدد التصرف بناءً على نوع التشغيل
+    if auto_sync:
+        # وضع التلقائي: ننتظر (دالة wait_for_internet هي التي تقرر النجاح أو الفشل بعد مهلة)
+        log("INFO", "No internet. Waiting for connection (Auto-sync mode)...", console=False)
+        result = wait_for_internet()
+    else:
+        # وضع اليدوي: فشل فوري
+        result = False
+
+    # 3. إعادة النتيجة النهائية (True أو False)
+    return result

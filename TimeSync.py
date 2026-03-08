@@ -1,278 +1,11 @@
-import subprocess
 import ctypes
 import sys
 import argparse
-from pathlib import Path
 
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
-from utils import send_notification, log
+from utils import log
 from config import APP_DIR, APP_ID, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
-
-# ==================================================
-# STARTUP TASK (TASK SCHEDULER)
-# ==================================================
-
-def create_startup_task(executable_path: Path = None):
-    relaunch_as_admin()
-
-    if executable_path is None:
-        executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
-
-    # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
-    task_name = STARTUP_TASK_NAME
-
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow = 0
-
-    cmd = (
-        f'schtasks /create /tn "{task_name}" /tr "\\"{executable_path}\\" now --auto" '
-        f'/sc onlogon /rl highest /f'
-    )
-    
-    try:
-        subprocess.run(cmd, shell=True, check=True, capture_output=True, startupinfo=startupinfo)
-        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=True)
-        
-    except subprocess.CalledProcessError as e:
-        log("ERROR", f"Failed to create startup task: {e}", console=True)
-
-
-def create_resume_task(executable_path: Path = None):
-    relaunch_as_admin()
-
-    if executable_path is None:
-        executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for resume to provide a better user experience on wake. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during wake. This also allows us to show notifications if needed during resume sync.
-
-    task_name = RESUME_TASK_NAME
-
-    cmd = (
-        f'schtasks /create /tn "{task_name}" '
-        f'/tr "\\"{executable_path}\\" now --auto" '
-        f'/sc onevent /ec System '
-        f'/mo "*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]" '
-        f'/rl highest /f'
-    )
-
-    try:
-        subprocess.run(cmd, shell=True, check=True)
-        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=True)
-    except subprocess.CalledProcessError as e:
-        log("ERROR", f"Failed to create resume task: {e}", console=True)
-
-
-def remove_startup_task():
-    relaunch_as_admin()
-
-    task_name = STARTUP_TASK_NAME
-    cmd = f'schtasks /delete /tn "{task_name}" /f'
-    try:
-        # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        log("INFO", "Startup task removed successfully.", console=True)
-    except subprocess.CalledProcessError:
-        log("ERROR", "Startup task not found or already removed.", console=True)
-
-
-def remove_resume_task():
-    relaunch_as_admin()
-    task_name = RESUME_TASK_NAME
-    cmd = f'schtasks /delete /tn "{task_name}" /f'
-    try:
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        log("INFO", "Resume task removed successfully.", console=True)
-    except subprocess.CalledProcessError:
-        log("ERROR", "Resume task not found or already removed.", console=True)
-
-
-def task_exists(task_name):
-    cmd = f'schtasks /query /tn "{task_name}"'
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return task_name in result.stdout
-    except Exception:
-        return False
-
-# ==================================================
-# TIME SYNC CORE
-# ==================================================
-
-def has_internet_connection():
-    """تحقق مما إذا كان هناك اتصال بالإنترنت"""
-    from socket import create_connection
-    try:
-        # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
-        with create_connection(("8.8.8.8", 53), timeout=3):
-            return True
-    except OSError:
-        log("INFO", "No internet connection detected.", console=False)
-    return False
-
-
-def set_system_time(dt_utc):
-    class SYSTEMTIME(ctypes.Structure):
-        _fields_ = [
-            ("wYear", ctypes.c_ushort),
-            ("wMonth", ctypes.c_ushort),
-            ("wDayOfWeek", ctypes.c_ushort),
-            ("wDay", ctypes.c_ushort),
-            ("wHour", ctypes.c_ushort),
-            ("wMinute", ctypes.c_ushort),
-            ("wSecond", ctypes.c_ushort),
-            ("wMilliseconds", ctypes.c_ushort),
-        ]
-
-    system_time = SYSTEMTIME()
-    system_time.wYear = dt_utc.year
-    system_time.wMonth = dt_utc.month
-    system_time.wDay = dt_utc.day
-    system_time.wHour = dt_utc.hour
-    system_time.wMinute = dt_utc.minute
-    system_time.wSecond = dt_utc.second
-    system_time.wMilliseconds = int(dt_utc.microsecond / 1000)
-
-    ctypes.windll.kernel32.SetSystemTime(ctypes.byref(system_time))
-
-
-def manual_ntp_sync():
-    import ntplib
-    from datetime import datetime, timezone
-
-    peers = [
-        "time.google.com",
-        "pool.ntp.org",
-        "time.windows.com"
-    ]
-
-    client = ntplib.NTPClient()
-
-    for peer in peers:
-        try:
-            response = client.request(peer, version=3)
-            ntp_time = datetime.fromtimestamp(response.tx_time, timezone.utc)
-
-            set_system_time(ntp_time)
-            return True
-        except:
-            continue
-
-    return False
-
-
-def wait_for_internet():
-    from time import sleep
-    for i in range(60): # 10 minutes max wait
-        if CANCEL_FILE.exists():
-            CANCEL_FILE.unlink(missing_ok=True)
-            send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
-            log("INFO", "Time sync cancelled by user.", console=False)
-            return False
-
-        if has_internet_connection():
-            return True
-
-        if i == 5:
-            cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
-            send_notification(
-                "No Internet Connection",
-                "⏳ Waiting for internet connection...",
-                actions=[
-                    ("Cancel", cancel_vbs)
-                ]
-            )
-
-        sleep(10)
-    
-    return False
-
-
-def sync_windows_time(auto=False):
-    relaunch_as_admin()
-    try:
-        if not auto:
-            print("🔄 Syncing Windows time...\n")
-        else:
-            hwnd = ctypes.windll.kernel32.GetConsoleWindow() # جلب معرف النافذة الحالية (التي هي الـ CMD السوداء)
-            if hwnd:
-                ctypes.windll.user32.ShowWindow(hwnd, 0) # إخفاء النافذة (0 تعني SW_HIDE)
-
-        subprocess.run(
-            "sc config w32time start= auto",
-            shell=True, check=True
-        )
-
-        subprocess.run("net stop w32time", shell=True)
-        subprocess.run("net start w32time", shell=True)
-
-        peers = (
-            "time.google.com,0x1 "
-            "pool.ntp.org,0x1 "
-            "time.windows.com,0x1"
-        )
-
-        subprocess.run(
-            f'w32tm /config /manualpeerlist:"{peers}" '
-            "/syncfromflags:manual /update",
-            shell=True, check=True
-        )
-
-        result = subprocess.run(
-            "w32tm /resync",
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode == 0:
-            if auto:
-                send_notification("Time Sync Success", "✅ Time synchronized successfully.")
-                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
-            else:
-                log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
-                print("✅ Time synchronized successfully.")
-            return True
-        else:
-            manual_success = manual_ntp_sync()
-
-            if manual_success:
-                if auto:
-                    send_notification("Time Sync", "✅ Time synchronized manually.")
-
-                    # Show warning
-                    settings = load_settings()
-                    if settings.get("show_warning_on_manual_sync", True):
-                        disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
-                        send_notification(
-                                            "⚠️ Warning",
-                                            "Windows has a problem with time sync, so TimeSync used a manual method to sync the time. Consider fixing Windows Time Service for better performance.",
-                                            actions=[
-                                                ("Don't show again", disable_warning_vbs)
-                                            ],
-                                            warning=True
-                                        )
-                        log("WARNING", "Time synchronized manually (fallback mode). Windows Time Service may have issues.", console=False)
-                else:
-                    print("✅ Time synchronized manually (fallback mode).")
-                return True
-            else:
-                if auto:
-                    retry_vbs = str(APP_DIR / "ts-now.vbs")
-                    send_notification(
-                        "Time Sync Failed",
-                        "❌ Time sync failed.",
-                        actions=[
-                            ("Retry", retry_vbs)
-                        ]
-                    )
-                else:
-                    print(result.stderr)
-                log("ERROR", f"Time sync failed: {result.stderr}", console=False)
-                return False
-
-    except Exception as e:
-        log("ERROR", f"Exception during time sync: {e}", console=True)
-        return False
 
 # ==================================================
 # COMMANDS
@@ -304,16 +37,9 @@ def commands_list():
 
 
 def cmd_now():
+    from core.sync_engine import check_internet_and_sync
     if "--auto" in sys.argv:
-        if wait_for_internet():
-            return sync_windows_time(auto=True)
-        return False
-    else:
-        if has_internet_connection():
-            return sync_windows_time()
-
-        print("❌ No internet connection. Please connect to the internet and try again.")
-        return False
+        return check_internet_and_sync(auto_sync="--auto" in sys.argv)
 
 
 def cmd_cancel():
@@ -327,10 +53,11 @@ def cmd_disable_warning():
     settings = load_settings()
     settings["show_warning_on_manual_sync"] = False
     save_settings(settings)
-    print("✅ Warning on manual sync has been disabled.")
+    log("INFO", "Warning on manual sync has been disabled.", console=False)
 
 
 def cmd_status():
+    from core.task_scheduler import task_exists
     print("\n=== TimeSync Status ===\n")
 
     print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
@@ -359,6 +86,7 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
 
 
 def cmd_toggle_startup(action=None):
+    from core.task_scheduler import task_exists, create_startup_task, remove_startup_task
     toggle_feature(
         action,
         lambda: task_exists(STARTUP_TASK_NAME),
@@ -369,6 +97,7 @@ def cmd_toggle_startup(action=None):
 
 
 def cmd_toggle_resume(action=None):
+    from core.task_scheduler import task_exists, create_resume_task, remove_resume_task
     toggle_feature(
         action,
         lambda: task_exists(RESUME_TASK_NAME),
