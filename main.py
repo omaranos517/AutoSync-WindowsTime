@@ -99,16 +99,32 @@ def cmd_now():
         log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
         
         if "--auto" in sys.argv:
-            send_notification("Time Sync Success", "✅ Time synchronized successfully.")
+            send_notification(
+                "Time Sync Success",
+                "✅ Time synchronized successfully.",
+                tag="sync-status",
+                group="sync-status"
+            )
         
         if result.warning:
             print(f"⚠️ Warning: {result.warning}")
-            send_notification("Time Sync Warning", f"⚠️ {result.warning}", actions=result.warning_actions)
+            send_notification(
+                "Time Sync Warning",
+                f"⚠️ {result.warning}",
+                actions=result.warning_actions,
+                tag="sync-status",
+                group="sync-status"
+            )
             log("SYNC_WARNING", result.warning, console=False)
         return True
     else:
         print(f"❌ Time synchronization failed: {result.error}")
-        send_notification("Time Sync Failed", f"❌ Time synchronization failed: {result.error}")
+        send_notification(
+            "Time Sync Failed",
+            f"❌ Time synchronization failed: {result.error}",
+            tag="sync-status",
+            group="sync-status"
+        )
         log("SYNC_FAILED", f"Time synchronization failed: {result.error}", console=False)
         return False
 

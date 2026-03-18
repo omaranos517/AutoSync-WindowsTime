@@ -20,7 +20,12 @@ def wait_for_internet():
     for i in range(60): # 10 minutes max wait
         if CANCEL_FILE.exists():
             CANCEL_FILE.unlink(missing_ok=True)
-            send_notification("Time Sync Cancelled", "❌ Sync process cancelled.")
+            send_notification(
+                "Time Sync Cancelled",
+                "❌ Sync process cancelled.",
+                tag="sync-status",
+                group="sync-status"
+            )
             log("INFO", "Time sync cancelled by user.", console=False)
             return False
 
@@ -33,7 +38,9 @@ def wait_for_internet():
                 "⏳ Waiting for internet connection...",
                 actions=[
                     ("Cancel", f"{PROTOCOL}://cancel")
-                ]
+                ],
+                tag="sync-status",
+                group="sync-status"
             )
 
         sleep(10)
