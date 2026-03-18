@@ -1,6 +1,24 @@
 import customtkinter as ctk
 
-from config import APP_NAME, VERSION, AUTHOR, GITHUB
+from config import APP_NAME, VERSION, AUTHOR, GITHUB, APP_DIR
+
+
+def _apply_window_icon(window):
+    icon_path = APP_DIR / "icon.ico"
+    if not icon_path.exists():
+        return
+
+    def set_icon():
+        try:
+            window.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+
+    # CTkToplevel may restyle/recreate titlebar shortly after creation on Windows,
+    # so we re-apply the icon once the window is fully initialized.
+    set_icon()
+    window.after(0, set_icon)
+    window.after(200, set_icon)
 
 
 def open_about_window(parent):
@@ -10,6 +28,8 @@ def open_about_window(parent):
     about.resizable(False, False)
     about.transient(parent)
     about.grab_set()
+
+    _apply_window_icon(about)
 
     container = ctk.CTkFrame(about, fg_color="transparent")
     container.pack(fill="both", expand=True, padx=16, pady=16)
@@ -65,6 +85,6 @@ def open_about_window(parent):
     )
     link_label.pack(fill="x", pady=(2, 10))
     link_label.bind("<Button-1>", open_repo)
-    
+
     close_button = ctk.CTkButton(container, text="Close", command=about.destroy)
     close_button.pack(pady=(0, 10))
