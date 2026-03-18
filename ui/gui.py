@@ -1,8 +1,7 @@
-import os
 import threading
 import customtkinter as ctk
 
-from config import APP_NAME, APP_DIR, VERSION, LOG_FILE, STARTUP_TASK_NAME, RESUME_TASK_NAME
+from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, RESUME_TASK_NAME
 
 # إعداد المظهر العام
 ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
@@ -53,25 +52,27 @@ class TimeSyncGUI(ctk.CTk):
             text_color="gray"
         )
         self.footer_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.footer_frame.grid(row=9, column=0, sticky="sew", padx=0, pady=0)
+        self.footer_frame.grid(row=9, column=0, sticky="ew", padx=20, pady=(0, 20))
+        self.footer_frame.grid_rowconfigure(0, weight=1)
         self.footer_frame.grid_columnconfigure(0, weight=1)
         self.footer_frame.grid_columnconfigure(1, weight=0)
 
-        self.version_label.grid(in_=self.footer_frame, row=0, column=0, sticky="w")
+        self.version_label.grid(in_=self.footer_frame, row=0, column=0, sticky="sw")
 
         self.about_button = ctk.CTkButton(
             self.footer_frame,
             text="ⓘ",
-            width=15,
-            height=16,
-            corner_radius=8,
-            font=ctk.CTkFont(size=11, weight="bold"),
+            width=10,
+            height=20,
+            corner_radius=100,
+            border_spacing=0,
+            font=ctk.CTkFont(size=13, weight="bold"),
             fg_color="#434343",
             hover_color="#6C6C6C",
             text_color="#202020",
             command=self.open_about_window
         )
-        self.about_button.grid(row=0, column=1, sticky="se")
+        self.about_button.grid(row=0, column=1, sticky="se", padx=(8, 0))
 
         # --- Main Content ---
         self.main_frame = ctk.CTkScrollableFrame(self, corner_radius=0, fg_color="transparent")
