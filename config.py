@@ -4,6 +4,7 @@ from sys import executable
 
 APP_NAME = "TimeSync"
 APP_ID = "OmarAnoss.TimeSync"
+PROTOCOL = "timesync"
 RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
 
@@ -15,6 +16,6 @@ SETTINGS_FILE = DATA_DIR / "settings.json"
 CANCEL_FILE = DATA_DIR / "cancel.flag"
 LOG_FILE = DATA_DIR / f"{APP_NAME}.log"
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 AUTHOR = "Omar Anoss"
 GITHUB = "https://github.com/omaranos517/AutoSync-WindowsTime"

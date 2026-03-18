@@ -1,7 +1,7 @@
 import subprocess
 import ctypes
 
-from config import APP_DIR
+from config import PROTOCOL
 from admin import relaunch_as_admin
 
 from .internet_check import is_internet_available
@@ -55,8 +55,11 @@ def sync_windows_time() -> SyncResult:
         manual_success = manual_ntp_sync()
 
         if manual_success:
-            disable_warning_vbs = str(APP_DIR / "ts-disable-warning.vbs")
-            return SyncResult(success=True, warning="Time synchronized manually (fallback mode).", warning_actions=[("Don't show again", disable_warning_vbs)])
+            return SyncResult(
+                success=True,
+                warning="Time synchronized manually (fallback mode).",
+                warning_actions=[("Don't show again", f"{PROTOCOL}://disable-warning")]
+            )
         else:
             return SyncResult(success=False, error="Failed to synchronize time.")
 

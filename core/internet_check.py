@@ -1,7 +1,7 @@
 from socket import create_connection
 
 from utils import log, send_notification
-from config import APP_DIR, CANCEL_FILE
+from config import PROTOCOL, CANCEL_FILE
 
 
 def has_internet_connection():
@@ -28,12 +28,11 @@ def wait_for_internet():
             return True
 
         if i == 5:
-            cancel_vbs = str(APP_DIR / "ts-cancel.vbs")
             send_notification(
                 "No Internet Connection",
                 "⏳ Waiting for internet connection...",
                 actions=[
-                    ("Cancel", cancel_vbs)
+                    ("Cancel", f"{PROTOCOL}://cancel")
                 ]
             )
 

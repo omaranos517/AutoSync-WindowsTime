@@ -2,11 +2,61 @@ import ctypes
 import os
 import sys
 import argparse
+from urllib.parse import urlparse, parse_qs
 
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import log
-from config import APP_DIR, APP_ID, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+from config import APP_DIR, APP_ID, APP_NAME, PROTOCOL, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+
+
+def _protocol_exe_path():
+    candidate = APP_DIR / "timesync-gui.exe"
+    if candidate.exists():
+        return candidate
+    return None
+
+
+def ensure_protocol_registered():
+    exe_path = _protocol_exe_path()
+    if not exe_path:
+        return
+
+    try:
+        import winreg
+
+        base_key = fr"Software\Classes\{PROTOCOL}"
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base_key) as k:
+            winreg.SetValueEx(k, None, 0, winreg.REG_SZ, f"URL:{APP_NAME} Protocol")
+            winreg.SetValueEx(k, "URL Protocol", 0, winreg.REG_SZ, "")
+
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base_key + r"\DefaultIcon") as k:
+            winreg.SetValueEx(k, None, 0, winreg.REG_SZ, f"{exe_path},1")
+
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base_key + r"\shell\open\command") as k:
+            winreg.SetValueEx(k, None, 0, winreg.REG_SZ, f"\"{exe_path}\" \"%1\"")
+    except Exception as e:
+        log("WARNING", f"Failed to register protocol: {e}", console=False)
+
+
+def normalize_protocol_args():
+    if len(sys.argv) != 2:
+        return
+
+    raw = sys.argv[1]
+    if not raw.startswith(f"{PROTOCOL}://"):
+        return
+
+    parsed = urlparse(raw)
+    command = parsed.netloc or parsed.path.lstrip("/")
+    if not command:
+        return
+
+    sys.argv = [sys.argv[0], command]
+    if command == "now":
+        query = parse_qs(parsed.query or "")
+        if query.get("auto", ["0"])[0] == "1":
+            sys.argv.append("--auto")
 
 # ==================================================
 # COMMANDS
@@ -122,7 +172,7 @@ def cmd_toggle_startup(action=None):
     toggle_feature(
         action,
         lambda: task_exists(STARTUP_TASK_NAME),
-        lambda: create_startup_task(APP_DIR / "timesync-gui.exe"),
+        lambda: create_startup_task(_protocol_exe_path()),
         remove_startup_task,
         "Startup"
     )
@@ -133,7 +183,7 @@ def cmd_toggle_resume(action=None):
     toggle_feature(
         action,
         lambda: task_exists(RESUME_TASK_NAME),
-        lambda: create_resume_task(APP_DIR / "timesync-gui.exe"),
+        lambda: create_resume_task(_protocol_exe_path()),
         remove_resume_task,
         "Resume"
     )
@@ -178,6 +228,9 @@ def cmd_version(): print(f"TimeSync v{VERSION}")
 # ==================================================
 
 def main():
+    ensure_protocol_registered()
+    normalize_protocol_args()
+
     parser = argparse.ArgumentParser(
         prog="timesync",
         description="Windows Time Synchronization Tool"
