@@ -19,6 +19,7 @@ def get_parser():
     subparsers.add_parser("status", help="Show current sync status")
     subparsers.add_parser("about", help="Show info about TimeSync")
     subparsers.add_parser("version", help="Show version")
+    subparsers.add_parser("commands", help="Show available commands")
     subparsers.add_parser("help", help="Show detailed commands list")
     
     # أوامر مخفية أو تقنية
