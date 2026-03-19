@@ -112,8 +112,8 @@ def cmd_now():
                 "Time Sync Warning",
                 f"⚠️ {result.warning}",
                 actions=result.warning_actions,
-                tag="sync-status",
-                group="sync-status"
+                tag="sync-warning",
+                group="sync-warning"
             )
             log("SYNC_WARNING", result.warning, console=False)
         return True

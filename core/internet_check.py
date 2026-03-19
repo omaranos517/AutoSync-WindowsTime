@@ -23,8 +23,8 @@ def wait_for_internet():
             send_notification(
                 "Time Sync Cancelled",
                 "❌ Sync process cancelled.",
-                tag="sync-status",
-                group="sync-status"
+                tag="sync-cancelled",
+                group="sync-cancelled"
             )
             log("INFO", "Time sync cancelled by user.", console=False)
             return False
