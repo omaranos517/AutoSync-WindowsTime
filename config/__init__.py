@@ -1,2 +1,2 @@
-from constants import *
-import settings
+from .constants import *
+from . import settings
