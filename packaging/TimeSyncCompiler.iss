@@ -1,5 +1,5 @@
 #define MyAppName "TimeSync"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Omar Anoss"
 #define MyAppExeName "timesync-gui.exe"
 #define MyAppUserModelID "OmarAnoss.TimeSync"
@@ -26,6 +26,9 @@ WizardStyle=modern dynamic
 
 [Files]
 Source: "{#SourcePath}\..\dist\TimeSync\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
 [Tasks]
 Name: "startup"; Description: "Run TimeSync at Windows startup"; Flags: checkedonce
