@@ -5,8 +5,8 @@ import argparse
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 
-from admin import relaunch_as_admin, is_admin
-from settings import load_settings, save_settings
+from utils.admin import relaunch_as_admin, is_admin
+from config.settings import load_settings, save_settings
 from utils import log
 from config import APP_DIR, APP_ID, APP_NAME, PROTOCOL, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 
@@ -31,13 +31,13 @@ ACTION_COMMANDS = {
     "notify": ["status", "enable", "disable"],
 }
 
-ANSI_RESET = "\033[0m"
-ANSI_COLORS = {
-    "red": "\033[91m",
-    "green": "\033[92m",
-    "yellow": "\033[93m",
-    "cyan": "\033[96m",
-}
+
+class Color:
+    DEFFAULT = "\033[0m"
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    CYAN = "\033[96m"
 
 
 def _protocol_exe_path():
@@ -70,23 +70,23 @@ def enable_ansi_colors():
 
 
 def colorize(text, color):
-    return f"{ANSI_COLORS.get(color, '')}{text}{ANSI_RESET}"
+    return f"{color}{text}{Color.DEFFAULT}"
 
 
 def success_text(text):
-    return colorize(text, "green")
+    return colorize(text, Color.GREEN)
 
 
 def error_text(text):
-    return colorize(text, "red")
+    return colorize(text, Color.RED)
 
 
 def warning_text(text):
-    return colorize(text, "yellow")
+    return colorize(text, Color.YELLOW)
 
 
 def info_text(text):
-    return colorize(text, "cyan")
+    return colorize(text, Color.CYAN)
 
 
 def enabled_disabled_text(enabled):

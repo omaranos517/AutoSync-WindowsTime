@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from admin import relaunch_as_admin
+from utils.admin import relaunch_as_admin
 from utils import log
 from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME
 

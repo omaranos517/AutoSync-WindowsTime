@@ -2,7 +2,7 @@ import subprocess
 import ctypes
 
 from config import PROTOCOL
-from admin import relaunch_as_admin
+from utils.admin import relaunch_as_admin
 
 from .internet_check import is_internet_available
 
