@@ -3,11 +3,33 @@ import os
 import sys
 import argparse
 from urllib.parse import urlparse, parse_qs
+from pathlib import Path
 
 from admin import relaunch_as_admin, is_admin
 from settings import load_settings, save_settings
 from utils import log
 from config import APP_DIR, APP_ID, APP_NAME, PROTOCOL, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+
+
+TOP_LEVEL_COMMANDS = [
+    "now",
+    "logs",
+    "help",
+    "commands",
+    "status",
+    "startup",
+    "resume",
+    "notify",
+    "completion",
+    "about",
+    "version",
+]
+
+ACTION_COMMANDS = {
+    "startup": ["status", "enable", "disable"],
+    "resume": ["status", "enable", "disable"],
+    "notify": ["status", "enable", "disable"],
+}
 
 
 def _protocol_exe_path():
@@ -70,6 +92,7 @@ def commands_list():
         "startup":       "Enable/disable startup sync",
         "resume":        "Enable/disable resume on wake (Sleep/hibernate)",
         "notify":        "Enable/disable notifications",
+        "completion":    "Print or install shell autocomplete",
         "logs":          "Open logs file",
         "about":         "Show info about TimeSync",
         "version":       "Show version"
@@ -239,6 +262,75 @@ def cmd_about():
 
 def cmd_version(): print(f"TimeSync v{VERSION}")
 
+
+def build_powershell_completion_script():
+    top_commands = ", ".join(f"'{cmd}'" for cmd in TOP_LEVEL_COMMANDS)
+    action_lines = []
+    for name, actions in ACTION_COMMANDS.items():
+        quoted_actions = ", ".join("'" + action + "'" for action in actions)
+        action_lines.append(f"    {name} = @({quoted_actions})")
+    action_map = "\n".join(action_lines)
+    template_candidates = [
+        APP_DIR / "timesync-completion.ps1",
+        Path(__file__).resolve().parent / "assets" / "timesync-completion.ps1",
+    ]
+
+    template_path = next((path for path in template_candidates if path.exists()), None)
+    if not template_path:
+        raise FileNotFoundError("timesync-completion.ps1 template was not found.")
+
+    template = template_path.read_text(encoding="utf-8")
+    return (
+        template
+        .replace("__TOP_LEVEL_COMMANDS__", top_commands)
+        .replace("__ACTION_MAP__", action_map)
+    )
+
+
+def cmd_completion(shell, install=False):
+    if shell != "powershell":
+        print(f"Unsupported shell: {shell}")
+        return
+
+    script = build_powershell_completion_script()
+
+    if not install:
+        print(script)
+        return
+
+    start_marker = "# >>> TimeSync autocomplete >>>"
+    end_marker = "# <<< TimeSync autocomplete <<<"
+    block = f"{start_marker}\n{script.rstrip()}\n{end_marker}\n"
+    profile_paths = [
+        Path.home() / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1",
+        Path.home() / "Documents" / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1",
+    ]
+
+    installed_paths = []
+    for profile_path in profile_paths:
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+
+        existing = profile_path.read_text(encoding="utf-8") if profile_path.exists() else ""
+        if start_marker in existing and end_marker in existing:
+            start_index = existing.index(start_marker)
+            end_index = existing.index(end_marker) + len(end_marker)
+            existing = existing[:start_index].rstrip() + "\n\n" + existing[end_index:].lstrip()
+
+        new_content = existing.rstrip()
+        if new_content:
+            new_content += "\n\n"
+        new_content += block
+
+        profile_path.write_text(new_content, encoding="utf-8")
+        installed_paths.append(profile_path)
+
+    print("PowerShell autocomplete installed to:")
+    for profile_path in installed_paths:
+        print(f"- {profile_path}")
+    print("Restart PowerShell, or run one of:")
+    for profile_path in installed_paths:
+        print(f". '{profile_path}'")
+
 # ==================================================
 # MAIN FLOW
 # ==================================================
@@ -289,6 +381,10 @@ def main():
     notify_sub.add_parser("enable")
     notify_sub.add_parser("disable")
 
+    completion = sub.add_parser("completion")
+    completion.add_argument("shell", choices=["powershell"], help="Shell type")
+    completion.add_argument("--install", action="store_true", help="Install completion into your PowerShell profile")
+
     sub.add_parser("about")
     sub.add_parser("version")
 
@@ -332,6 +428,9 @@ def main():
 
         elif args.command in action_commands:
             action_commands[args.command](args.action or "status")
+
+        elif args.command == "completion":
+            cmd_completion(args.shell, install=args.install)
     else:
         parser.print_help()
         print("\n\nUse 'timesync help' for more information.\n\n")

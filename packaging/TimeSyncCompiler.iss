@@ -33,6 +33,7 @@ Name: "startup"; Description: "Run TimeSync at Windows startup"; Flags: checkedo
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
+Filename: "{app}\{#MyAppExeName}"; Parameters: "completion powershell --install"; Flags: runhidden runasoriginaluser waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch TimeSync"; Flags: nowait postinstall skipifsilent
 
 [Icons]

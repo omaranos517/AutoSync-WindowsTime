@@ -12,6 +12,7 @@ a = Analysis(
     datas=[
         (str(project_root / 'assets' / 'icon.ico'), '.'),
         (str(project_root / 'assets' / 'timesync.bat'), '.'),
+        (str(project_root / 'assets' / 'timesync-completion.ps1'), '.'),
     ],
     hiddenimports=[],
     hookspath=[],
