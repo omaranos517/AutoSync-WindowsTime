@@ -31,12 +31,66 @@ ACTION_COMMANDS = {
     "notify": ["status", "enable", "disable"],
 }
 
+ANSI_RESET = "\033[0m"
+ANSI_COLORS = {
+    "red": "\033[91m",
+    "green": "\033[92m",
+    "yellow": "\033[93m",
+    "cyan": "\033[96m",
+}
+
 
 def _protocol_exe_path():
     candidate = APP_DIR / "timesync-gui.exe"
     if candidate.exists():
         return candidate
     return None
+
+
+def enable_ansi_colors():
+    if os.name != "nt":
+        return
+
+    try:
+        handle = ctypes.windll.kernel32.GetStdHandle(-11)
+        if handle == 0:
+            return
+
+        mode = ctypes.c_uint()
+        if ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)) == 0:
+            return
+
+        virtual_terminal = 0x0004
+        if mode.value & virtual_terminal:
+            return
+
+        ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | virtual_terminal)
+    except Exception:
+        pass
+
+
+def colorize(text, color):
+    return f"{ANSI_COLORS.get(color, '')}{text}{ANSI_RESET}"
+
+
+def success_text(text):
+    return colorize(text, "green")
+
+
+def error_text(text):
+    return colorize(text, "red")
+
+
+def warning_text(text):
+    return colorize(text, "yellow")
+
+
+def info_text(text):
+    return colorize(text, "cyan")
+
+
+def enabled_disabled_text(enabled):
+    return success_text("Enabled") if enabled else error_text("Disabled")
 
 
 def ensure_protocol_registered():
@@ -107,18 +161,18 @@ def commands_list():
     print("\nUse 'timesync <command> -h' for more info on each command.")
 
     if not is_admin():
-        print("\n⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.")
+        print(f"\n{warning_text('⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.')}")
 
 
 def cmd_now():
-    print("🔄 Syncing time now...")
+    print(info_text("🔄 Syncing time now..."))
     from core.sync_engine import check_internet_and_sync
     from utils import send_notification
 
     result = check_internet_and_sync(auto_sync="--auto" in sys.argv)
 
     if result.success:
-        print("✅ Time synchronized successfully!")
+        print(success_text("✅ Time synchronized successfully!"))
         log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
         
         if "--auto" in sys.argv:
@@ -130,7 +184,7 @@ def cmd_now():
             )
         
         if result.warning:
-            print(f"⚠️ Warning: {result.warning}")
+            print(warning_text(f"⚠️ Warning: {result.warning}"))
             send_notification(
                 "Time Sync Warning",
                 f"⚠️ {result.warning}",
@@ -141,7 +195,7 @@ def cmd_now():
             log("SYNC_WARNING", result.warning, console=False)
         return True
     else:
-        print(f"❌ Time synchronization failed: {result.error}")
+        print(error_text(f"❌ Time synchronization failed: {result.error}"))
         send_notification(
             "Time Sync Failed",
             f"❌ Time synchronization failed: {result.error}",
@@ -170,24 +224,24 @@ def cmd_status():
     from core.task_scheduler import task_exists
     print("\n=== TimeSync Status ===\n")
 
-    print("🔐 Running as Administrator" if is_admin() else "⚠️ Not running as Administrator")
-    print("🚀 Startup with Windows: Enabled" if task_exists(STARTUP_TASK_NAME) else "🚫 Startup with Windows: Disabled")
-    print("💤 Sync on Wake: Enabled" if task_exists(RESUME_TASK_NAME) else "🚫 Sync on Wake: Disabled")
-    print("🔔 Notifications: Enabled" if load_settings().get("notifications", True) else "🚫 Notifications: Disabled")
+    print(success_text("🔐 Running as Administrator") if is_admin() else warning_text("⚠️ Not running as Administrator"))
+    print(f"🚀 Startup with Windows: {enabled_disabled_text(task_exists(STARTUP_TASK_NAME))}")
+    print(f"💤 Sync on Wake: {enabled_disabled_text(task_exists(RESUME_TASK_NAME))}")
+    print(f"🔔 Notifications: {enabled_disabled_text(load_settings().get('notifications', True))}")
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
 
 
 def cmd_logs():
-    print("Logs file opening...")
+    print(info_text("Logs file opening..."))
     try:
         if LOG_FILE.exists():
             os.startfile(LOG_FILE)
         else:
-            print("No logs found.")
+            print(warning_text("No logs found."))
     except Exception as e:
-        print(f"Failed to open logs: {e}")
+        print(error_text(f"Failed to open logs: {e}"))
 
 
 def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
@@ -203,7 +257,10 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
         else:
             enable_fn()
 
-    print(f"✅ {name} enabled" if exists_fn() else f"❌ {name} disabled")
+    is_enabled = exists_fn()
+    status_text = success_text("enabled") if is_enabled else error_text("disabled")
+    icon = "✅" if is_enabled else "❌"
+    print(f"{icon} {name} {status_text}")
 
 
 def cmd_toggle_startup(action=None):
@@ -241,7 +298,8 @@ def cmd_toggle_notify(action=None):
         settings["notifications"] = not current
 
     save_settings(settings)
-    status = "enabled" if settings["notifications"] else "disabled"
+    is_enabled = settings["notifications"]
+    status = success_text("enabled") if is_enabled else error_text("disabled")
     print(f"🔔 Notifications {status}.")
 
 
@@ -289,7 +347,7 @@ def build_powershell_completion_script():
 
 def cmd_completion(shell, install=False):
     if shell != "powershell":
-        print(f"Unsupported shell: {shell}")
+        print(error_text(f"Unsupported shell: {shell}"))
         return
 
     script = build_powershell_completion_script()
@@ -324,10 +382,10 @@ def cmd_completion(shell, install=False):
         profile_path.write_text(new_content, encoding="utf-8")
         installed_paths.append(profile_path)
 
-    print("PowerShell autocomplete installed to:")
+    print(success_text("PowerShell autocomplete installed to:"))
     for profile_path in installed_paths:
         print(f"- {profile_path}")
-    print("Restart PowerShell, or run one of:")
+    print(info_text("Restart PowerShell, or run one of:"))
     for profile_path in installed_paths:
         print(f". '{profile_path}'")
 
@@ -336,6 +394,7 @@ def cmd_completion(shell, install=False):
 # ==================================================
 
 def main():
+    enable_ansi_colors()
     ensure_protocol_registered()
     normalize_protocol_args()
 
@@ -397,7 +456,7 @@ def main():
 
     if len(sys.argv) == 1:
         from ui import run_gui
-        print("🚀 Starting TimeSync in GUI mode...")
+        print(info_text("🚀 Starting TimeSync in GUI mode..."))
         relaunch_as_admin()
         run_gui()
         return
