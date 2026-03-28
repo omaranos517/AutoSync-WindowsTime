@@ -6,18 +6,20 @@ from config import PROTOCOL, CANCEL_FILE
 
 def has_internet_connection():
     """تحقق مما إذا كان هناك اتصال بالإنترنت"""
-    try:
-        # محاولة الاتصال بـ DNS جوجل للتأكد من وجود إنترنت
-        with create_connection(("8.8.8.8", 53), timeout=3):
-            return True
-    except OSError:
-        log("INFO", "No internet connection detected.", console=False)
+    for target in [("8.8.8.8", 53), ("1.1.1.1", 53)]:
+        for attempt in range(2):            
+            try:
+                with create_connection(target, timeout=5):
+                    return True
+            except (OSError, TimeoutError, ConnectionRefusedError):
+                continue
+    log("INFO", "No internet connection detected.", console=False)
     return False
 
 
 def wait_for_internet():
     from time import sleep
-    for i in range(60): # 10 minutes max wait
+    for i in range(300): # 10 minutes max wait
         if CANCEL_FILE.exists():
             CANCEL_FILE.unlink(missing_ok=True)
             send_notification(
@@ -43,7 +45,7 @@ def wait_for_internet():
                 group="sync-status"
             )
 
-        sleep(10)
+        sleep(2) # Wait before retrying
     
     return False
 

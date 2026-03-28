@@ -35,38 +35,14 @@ Register-ArgumentCompleter -Native -CommandName 'timesync', 'timesync.bat', 'tim
             return
         }
 
-        if ($command -eq 'now') {
-            Complete-TimeSyncValues -Values @('--auto') -CompletionType 'ParameterName'
-            return
-        }
-
         if ($TimeSyncActions.ContainsKey($command)) {
             Complete-TimeSyncValues -Values $TimeSyncActions[$command]
             return
         }
-
-        if ($command -eq 'completion') {
-            Complete-TimeSyncValues -Values @('powershell')
-        }
-        return
     }
 
     if ($TimeSyncActions.ContainsKey($command) -and $tokens.Count -eq 2) {
         Complete-TimeSyncValues -Values $TimeSyncActions[$command]
         return
-    }
-
-    if ($command -eq 'completion' -and $tokens.Count -eq 2) {
-        Complete-TimeSyncValues -Values @('--install') -CompletionType 'ParameterName'
-        return
-    }
-
-    if ($command -eq 'completion' -and $tokens.Count -eq 3 -and $tokens[1] -eq 'powershell') {
-        Complete-TimeSyncValues -Values @('--install') -CompletionType 'ParameterName'
-        return
-    }
-
-    if ($command -eq 'now' -and $tokens.Count -eq 2) {
-        Complete-TimeSyncValues -Values @('--auto') -CompletionType 'ParameterName'
     }
 }

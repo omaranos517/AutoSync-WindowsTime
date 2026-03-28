@@ -21,7 +21,7 @@ def create_startup_task(executable_path: Path = None):
 
     cmd = (
         f'schtasks /create /tn "{task_name}" /tr "\\"{executable_path}\\" now --auto" '
-        f'/sc onlogon /rl highest /f'
+        f'/sc onlogon /rl highest /f /delay 0000:00'
     )
     
     try:

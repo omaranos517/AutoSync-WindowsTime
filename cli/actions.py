@@ -8,7 +8,6 @@ from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LO
 from config.settings import load_settings, save_settings
 
 
-
 TOP_LEVEL_COMMANDS = [
     "now",
     "logs",
@@ -18,7 +17,6 @@ TOP_LEVEL_COMMANDS = [
     "startup",
     "resume",
     "notify",
-    "completion",
     "about",
     "version",
 ]
@@ -151,20 +149,6 @@ def cmd_now():
         return False
 
 
-def cmd_cancel():
-    try:
-        CANCEL_FILE.touch()
-    except Exception as e:
-        log("ERROR", f"Failed to create cancel file: {e}", console=False)
-
-
-def cmd_disable_warning():
-    settings = load_settings()
-    settings["show_warning_on_manual_sync"] = False
-    save_settings(settings)
-    log("INFO", "Warning on manual sync has been disabled.", console=False)
-
-
 def cmd_status():
     from core.task_scheduler import task_exists
     print("\n=== TimeSync Status ===\n")
@@ -263,8 +247,14 @@ def cmd_about():
 ╚══════════════════════════════════════════════╝
 """)
 
+
 def cmd_version(): print(f"TimeSync v{VERSION}")
 
+
+
+# ==================================================
+# AUTO COMANDS 
+# ==================================================
 
 def build_powershell_completion_script():
     top_commands = ", ".join(f"'{cmd}'" for cmd in TOP_LEVEL_COMMANDS)
@@ -334,3 +324,17 @@ def cmd_completion(shell, install=False):
     print(info_text("Restart PowerShell, or run one of:"))
     for profile_path in installed_paths:
         print(f". '{profile_path}'")
+
+
+def cmd_cancel():
+    try:
+        CANCEL_FILE.touch()
+    except Exception as e:
+        log("ERROR", f"Failed to create cancel file: {e}", console=False)
+
+
+def cmd_disable_warning():
+    settings = load_settings()
+    settings["show_warning_on_manual_sync"] = False
+    save_settings(settings)
+    log("INFO", "Warning on manual sync has been disabled.", console=False)
