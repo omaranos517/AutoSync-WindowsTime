@@ -26,7 +26,7 @@ def create_startup_task(executable_path: Path = None):
     
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True, startupinfo=startupinfo)
-        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=True)
+        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=False)
         
     except subprocess.CalledProcessError as e:
         log("ERROR", f"Failed to create startup task: {e}", console=True)
@@ -50,7 +50,7 @@ def create_resume_task(executable_path: Path = None):
 
     try:
         subprocess.run(cmd, shell=True, check=True)
-        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=True)
+        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=False)
     except subprocess.CalledProcessError as e:
         log("ERROR", f"Failed to create resume task: {e}", console=True)
 
@@ -63,7 +63,7 @@ def remove_startup_task():
     try:
         # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        log("INFO", "Startup task removed successfully.", console=True)
+        log("INFO", "Startup task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Startup task not found or already removed.", console=True)
 
@@ -74,7 +74,7 @@ def remove_resume_task():
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
-        log("INFO", "Resume task removed successfully.", console=True)
+        log("INFO", "Resume task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Resume task not found or already removed.", console=True)
 

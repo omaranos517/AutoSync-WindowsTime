@@ -26,9 +26,10 @@ def log(level, message, console=False):
         # إعادة كتابة كل السطور بعد القص
         with open(LOG_FILE, "w", encoding="utf-8") as f:
             f.writelines(lines)
-            
+
     except Exception as e:
         print(f"❌ Failed to write log: {e}")
     
-    if console:
+    if console or level in ["ERROR", "WARNING"]:
         print(level + ": " + message)
+        print("For more details, check the log file at: " + str(LOG_FILE))
