@@ -60,6 +60,14 @@ const
   WM_SETTINGCHANGE = $001A;
   SMTO_ABORTIFHUNG = $0002;
 
+var
+  DeleteUserDataOnUninstall: Boolean;
+
+function GetUserDataDir(): string;
+begin
+  Result := ExpandConstant('{localappdata}\{#MyAppName}');
+end;
+
 procedure AddToPath();
 var
   OldPath, NewPath: string;
@@ -135,18 +143,28 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
   begin
-     RemoveFromPath();
+    RemoveFromPath();
+    DeleteUserDataOnUninstall := False;
+
+    if DirExists(GetUserDataDir()) then
+    begin
+      if MsgBox(
+        'Do you want to delete settings and log files?' + #13#10 +
+        '(This will remove your history and preferences)',
+        mbConfirmation,
+        MB_YESNO
+      ) = IDYES then
+      begin
+        DeleteUserDataOnUninstall := True;
+      end;
+    end;
   end;
 
   if CurUninstallStep = usPostUninstall then
   begin
-    if DirExists(ExpandConstant('{localappdata}\TimeSync')) then
+    if DeleteUserDataOnUninstall and DirExists(GetUserDataDir()) then
     begin
-      if MsgBox('Do you want to delete settings and log files?' + #13#10 + '(This will remove your history and preferences)', 
-                mbConfirmation, MB_YESNO) = IDYES then
-      begin
-        DelTree(ExpandConstant('{localappdata}\{#MyAppName}'), True, True, True);
-      end;
+      DelTree(GetUserDataDir(), True, True, True);
     end;
   end;
 end;
