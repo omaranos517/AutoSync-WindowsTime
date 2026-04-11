@@ -325,6 +325,9 @@ def cmd_completion(shell, install=False):
     for profile_path in installed_paths:
         print(f". '{profile_path}'")
 
+# ==================================================
+# notifications actions
+# ==================================================
 
 def cmd_cancel():
     try:
@@ -338,3 +341,18 @@ def cmd_disable_warning():
     settings["show_warning_on_manual_sync"] = False
     save_settings(settings)
     log("INFO", "Warning on manual sync has been disabled.", console=False)
+
+
+def cmd_restart_pc():
+    """
+    تقوم بإعادة تشغيل الجهاز فوراً.
+    استخدام السويتشات:
+    /r : إعادة تشغيل
+    /t 0 : الوقت المتبقي (صفر ثانية)
+    /f : إجبار إغلاق التطبيقات المفتوحة لضمان عدم تعليق العملية
+    """
+    print("🔌 Restarting PC now...")
+    try:
+        ctypes.windll.shell32.ShellExecuteW(None, "open", "shutdown.exe", "/r /t 0 /f", None, 0)
+    except Exception as e:
+        log("ERROR", f"Failed to restart PC: {e}", console=True)

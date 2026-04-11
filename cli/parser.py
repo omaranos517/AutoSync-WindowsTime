@@ -22,9 +22,10 @@ def get_parser():
     subparsers.add_parser("commands", help="Show available commands")
     subparsers.add_parser("help", help="Show detailed commands list")
     
-    # أوامر مخفية أو تقنية
+    # --- Hidden Commands ---
     subparsers.add_parser("cancel", help=argparse.SUPPRESS) 
     subparsers.add_parser("disable-warning", help=argparse.SUPPRESS)
+    subparsers.add_parser("restart-pc", help=argparse.SUPPRESS)
 
     # --- Commands with Actions (startup, resume, notify) ---
     for cmd_name in ["startup", "resume", "notify"]:

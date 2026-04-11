@@ -28,6 +28,7 @@ def main():
     commands = {
         "cancel": actions.cmd_cancel,
         "disable-warning": actions.cmd_disable_warning,
+        "restart-pc": actions.cmd_restart_pc,
         "help": actions.commands_list,
         "commands": actions.commands_list,
         "status": actions.cmd_status,
