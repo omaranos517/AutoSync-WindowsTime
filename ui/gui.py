@@ -14,6 +14,7 @@ class TimeSyncGUI(ctk.CTk):
         self.logic = main_logic_functions
         self.sync_in_progress = False
         self._is_destroyed = False
+        self._sync_thread = None
         
         # إعدادات النافذة
         self.title(APP_NAME)
@@ -138,8 +139,8 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_button.configure(state="disabled")
         self.status_label.configure(text="Status: Syncing...", text_color="orange")
 
-        sync_thread = threading.Thread(target=self._sync_worker, daemon=True)
-        sync_thread.start()
+        self._sync_thread = threading.Thread(target=self._sync_worker)
+        self._sync_thread.start()
 
     def _sync_worker(self):
         try:
@@ -153,11 +154,16 @@ class TimeSyncGUI(ctk.CTk):
         except Exception:
             self.update_status("Status: Failed", "red")
         finally:
-            self.after(0, self._finish_sync)
+            if not self._is_destroyed:
+                self.after(0, self._finish_sync)
+            else:
+                self._finish_sync()
 
     def _finish_sync(self):
         self.sync_in_progress = False
-        self.sync_button.configure(state="normal")
+        self._sync_thread = None
+        if not self._is_destroyed:
+            self.sync_button.configure(state="normal")
 
     def open_about_window(self):
         from .about_window import open_about_window
