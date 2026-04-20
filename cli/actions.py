@@ -89,7 +89,6 @@ def commands_list():
         "startup":       "Enable/disable startup sync",
         "resume":        "Enable/disable resume on wake (Sleep/hibernate)",
         "notify":        "Enable/disable notifications",
-        "completion":    "Print or install shell autocomplete",
         "logs":          "Open logs file",
         "about":         "Show info about TimeSync",
         "version":       "Show version"
@@ -107,7 +106,8 @@ def commands_list():
         print(f"\n{warning_text('⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.')}")
 
 
-def cmd_now():
+def cmd_now() -> str:
+    """Main command to sync time immediately. Returns a status message indicating success, failure, or any warnings."""
     print(info_text("🔄 Syncing time now..."))
     from core.sync_engine import check_internet_and_sync
     from utils import send_notification
@@ -128,15 +128,17 @@ def cmd_now():
         
         if result.warning:
             print(warning_text(f"⚠️ Warning: {result.warning}"))
-            send_notification(
-                "Time Sync Warning",
-                f"⚠️ {result.warning}",
-                actions=result.warning_actions,
-                tag="sync-warning",
-                group="sync-warning"
-            )
+            if "--auto" in sys.argv:
+                send_notification(
+                    "Time Sync Warning",
+                    f"⚠️ {result.warning}",
+                    actions=result.warning_actions,
+                    tag="sync-warning",
+                    group="sync-warning"
+                )
             log("SYNC_WARNING", result.warning, console=False)
-        return True
+            return f"Warning: {result.warning}"
+        return "Success: Time synchronized successfully."
     else:
         print(error_text(f"❌ Time synchronization failed: {result.error}"))
         send_notification(
@@ -146,7 +148,7 @@ def cmd_now():
             group="sync-status"
         )
         log("SYNC_FAILED", f"Time synchronization failed: {result.error}", console=False)
-        return False
+        return f"Failed: {result.error}"
 
 
 def cmd_status():

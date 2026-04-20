@@ -13,6 +13,7 @@ class TimeSyncGUI(ctk.CTk):
         
         self.logic = main_logic_functions
         self.sync_in_progress = False
+        self._is_destroyed = False
         
         # إعدادات النافذة
         self.title(APP_NAME)
@@ -21,6 +22,8 @@ class TimeSyncGUI(ctk.CTk):
             self.iconbitmap(str(icon))
         self.geometry("600x450")
         self.minsize(520, 250)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         # إنشاء هيكل النافذة (Sidebar and Main Content)
         self.grid_columnconfigure(1, weight=1)
@@ -39,10 +42,10 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_button = ctk.CTkButton(self.sidebar, text="Sync Now", command=self.handle_sync)
         self.sync_button.grid(row=1, column=0, padx=20, pady=10)
 
-        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=self.logic['cmd_logs'])
+        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['cmd_logs'](), self.update_status("Status: Opening log file...", "blue")])
         self.open_log_button.grid(row=2, column=0, padx=20, pady=10)
 
-        self.status_label = ctk.CTkLabel(self.sidebar, text="Status: Ready", font=ctk.CTkFont(size=12))
+        self.status_label = ctk.CTkLabel(self.sidebar, text=f"{self.internet_status()}", font=ctk.CTkFont(size=12))
         self.status_label.grid(row=7, column=0, padx=20, pady=20)
 
         self.version_label = ctk.CTkLabel(
@@ -101,7 +104,32 @@ class TimeSyncGUI(ctk.CTk):
             switch.select()
         switch.pack(side="right", padx=20)
 
-    # --- Handlers (الربط مع المنطق الخاص بك) ---
+    def on_closing(self):
+        self._is_destroyed = True
+        self.destroy()
+
+    def update_status(self, text, color):
+        """Only update status if the window is not destroyed to avoid errors."""
+        if not self._is_destroyed:
+            self.after(0, lambda: self.status_label.configure(text=text, text_color=color))
+        else:
+            try:
+                from utils.notifySystem import send_notification
+                send_notification(
+                    "TimeSync Status Update",
+                    text,
+                    tag="sync-status",
+                    group="sync-status"
+                )
+            except ImportError:
+                pass
+
+    def internet_status(self):
+        if self.logic['has_internet_connection']():
+            return "Status: Ready to sync"
+        else:
+            return "Status: No internet connection"
+
     def handle_sync(self):
         if self.sync_in_progress:
             return
@@ -115,13 +143,15 @@ class TimeSyncGUI(ctk.CTk):
 
     def _sync_worker(self):
         try:
-            sync_result = bool(self.logic['cmd_now']())
-            if sync_result:
-                self.after(0, lambda: self.status_label.configure(text="Status: Success", text_color="green"))
-            else:
-                self.after(0, lambda: self.status_label.configure(text="Status: No internet / Failed", text_color="red"))
+            sync_result = self.logic['cmd_now']()
+
+            color = "green" if "Success" in sync_result else "red"
+            if "Warning" in sync_result: color = "orange"
+
+            self.update_status(sync_result, color)
+            
         except Exception:
-            self.after(0, lambda: self.status_label.configure(text="Status: Failed", text_color="red"))
+            self.update_status("Status: Failed", "red")
         finally:
             self.after(0, self._finish_sync)
 
@@ -131,31 +161,39 @@ class TimeSyncGUI(ctk.CTk):
 
     def open_about_window(self):
         from .about_window import open_about_window
+        self.update_status("Status: Opening About Window...", "blue")
         open_about_window(self)
 
     def toggle_startup(self, switch):
         if switch.get():
             self.logic['cmd_toggle_startup']("enable")
+            self.update_status("Status: Startup sync enabled", "green")
         else:
             self.logic['cmd_toggle_startup']("disable")
+            self.update_status("Status: Startup sync disabled", "red")
 
     def toggle_resume(self, switch):
         if switch.get():
             self.logic['cmd_toggle_resume']("enable")
+            self.update_status("Status: Resume sync enabled", "green")
         else:
             self.logic['cmd_toggle_resume']("disable")
+            self.update_status("Status: Resume sync disabled", "red")
 
     def toggle_notifications(self, switch):
         if switch.get():
             self.logic['cmd_toggle_notify']("enable")
+            self.update_status("Status: Notifications enabled", "green")
         else:
             self.logic['cmd_toggle_notify']("disable")
+            self.update_status("Status: Notifications disabled", "red")
 
 def run_gui():
     # هنا نمرر الدوال من الكود الأصلي للواجهة
     from cli.actions import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, cmd_logs
     from config.settings import load_settings
     from core.task_scheduler import task_exists
+    from core.internet_check import has_internet_connection
     
     logic_map = {
         'cmd_now': cmd_now,
@@ -164,7 +202,8 @@ def run_gui():
         'task_exists': task_exists,
         'cmd_toggle_resume': cmd_toggle_resume,
         'load_settings': load_settings,
-        'cmd_toggle_notify': cmd_toggle_notify
+        'cmd_toggle_notify': cmd_toggle_notify,
+        'has_internet_connection': has_internet_connection
     }
     
     app = TimeSyncGUI(logic_map)

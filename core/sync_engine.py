@@ -44,7 +44,7 @@ def sync_windows_time() -> SyncResult:
             return SyncResult(success=False, error="Failed to synchronize time.")
 
 
-def attempt_time_sync():
+def attempt_time_sync() -> bool:
     try:
         subprocess.run(
             "sc config w32time start= auto",
@@ -83,7 +83,7 @@ def attempt_time_sync():
         raise Exception(f"Resync failed with code: {e.stderr.strip()}")
 
 
-def fix_w32time_service():
+def fix_w32time_service() -> bool:
     try:
         print("🔧 Attempting to fix w32time service...\n")
 
@@ -97,10 +97,9 @@ def fix_w32time_service():
     except Exception as e:
         print(f"Error while fixing w32time service: {e} \n Now attempting manual NTP synchronization...")
         return False
-        
 
 
-def set_system_time(dt_utc):
+def _set_system_time(dt_utc):
     class SYSTEMTIME(ctypes.Structure):
         _fields_ = [
             ("wYear", ctypes.c_ushort),
@@ -125,7 +124,7 @@ def set_system_time(dt_utc):
     ctypes.windll.kernel32.SetSystemTime(ctypes.byref(system_time))
 
 
-def manual_ntp_sync():
+def manual_ntp_sync() -> bool:
     print("⚠️  Windows Service synchronization failed. Trying to synchronize manually...\n")
     import ntplib
     from datetime import datetime, timezone
@@ -143,7 +142,7 @@ def manual_ntp_sync():
             response = client.request(peer, version=3)
             ntp_time = datetime.fromtimestamp(response.tx_time, timezone.utc)
 
-            set_system_time(ntp_time)
+            _set_system_time(ntp_time)
             return True
         except:
             continue

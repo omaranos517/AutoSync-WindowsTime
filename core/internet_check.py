@@ -5,7 +5,7 @@ from config import PROTOCOL, CANCEL_FILE
 
 
 def has_internet_connection():
-    """تحقق مما إذا كان هناك اتصال بالإنترنت"""
+    """Check if there is an internet connection available."""
     for target in [("8.8.8.8", 53), ("1.1.1.1", 53)]:
         for attempt in range(2):            
             try:
@@ -18,6 +18,7 @@ def has_internet_connection():
 
 
 def wait_for_internet():
+    """Wait for an internet connection to become available, with user cancellation support."""
     from time import sleep
     for i in range(300): # 10 minutes max wait
         if CANCEL_FILE.exists():
@@ -52,10 +53,13 @@ def wait_for_internet():
 
 def is_internet_available(auto_sync=True):
     """
-    التحقق من الإنترنت:
-    - يعود بـ True فوراً إذا وجد اتصال.
-    - في الوضع التلقائي (auto): ينتظر الاتصال ويعود بالنتيجة.
-    - في الوضع اليدوي: يعود بـ False فوراً مع تسجيل Log.
+    Internet Check:
+
+    - Returns True immediately if a connection is found.
+
+    - In automatic mode: Waits for a connection and returns the result.
+
+    - In manual mode: Returns False immediately with a log.
     """
     # 1. تحقق سريع: إذا كان الإنترنت متاحاً الآن، اخرج بـ True
     if has_internet_connection():
@@ -64,7 +68,6 @@ def is_internet_available(auto_sync=True):
     # 2. إذا لم يتوفر إنترنت، نحدد التصرف بناءً على نوع التشغيل
     if auto_sync:
         # وضع التلقائي: ننتظر (دالة wait_for_internet هي التي تقرر النجاح أو الفشل بعد مهلة)
-        log("INFO", "No internet. Waiting for connection (Auto-sync mode)...", console=False)
         result = wait_for_internet()
     else:
         # وضع اليدوي: فشل فوري
