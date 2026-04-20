@@ -82,6 +82,7 @@ def enabled_disabled_text(enabled):
 
 
 def commands_list():
+    """Prints a list of available commands with descriptions. If not running as admin, shows a warning about potential limitations."""
     commands = {
         "now":           "Sync time immediately",
         "Commands/help": "Show Every available command",
@@ -152,6 +153,7 @@ def cmd_now() -> str:
 
 
 def cmd_status():
+    """Shows the current status of TimeSync, including whether it's running as administrator, if startup and resume tasks are enabled, and if notifications are on. Also provides a reminder about the graphical interface and where to find logs."""
     from core.task_scheduler import task_exists
     print("\n=== TimeSync Status ===\n")
 
@@ -165,6 +167,7 @@ def cmd_status():
 
 
 def cmd_logs():
+    """Opens the log file in the default text editor. If the log file doesn't exist, shows a warning message."""
     print(info_text("Logs file opening..."))
     try:
         if LOG_FILE.exists():
@@ -176,6 +179,7 @@ def cmd_logs():
 
 
 def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
+    """Generic function to toggle a feature on/off based on the provided action. It checks the current state using exists_fn, enables or disables the feature accordingly, and then prints the new status."""
     if action == "enable":
         enable_fn()
     elif action == "disable":
@@ -195,6 +199,7 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
 
 
 def cmd_toggle_startup(action=None):
+    """Enables, disables, or shows the status of the startup sync feature. Uses the task scheduler to create or remove a task that runs TimeSync on Windows startup."""
     from core.task_scheduler import task_exists, create_startup_task, remove_startup_task
     toggle_feature(
         action,
@@ -206,6 +211,7 @@ def cmd_toggle_startup(action=None):
 
 
 def cmd_toggle_resume(action=None):
+    """Enables, disables, or shows the status of the resume on wake feature. Uses the task scheduler to create or remove a task that runs TimeSync when the computer wakes from sleep or hibernate."""
     from core.task_scheduler import task_exists, create_resume_task, remove_resume_task
     toggle_feature(
         action,
@@ -217,6 +223,7 @@ def cmd_toggle_resume(action=None):
 
 
 def cmd_toggle_notify(action=None):
+    """Enables, disables, or shows the status of notifications. Updates the settings file to reflect the new state and prints the current status."""
     settings = load_settings()
     current = settings.get("notifications", True)
     
@@ -235,6 +242,7 @@ def cmd_toggle_notify(action=None):
 
 
 def cmd_about():
+    """Prints information about the TimeSync tool, including version, author, and GitHub link, in a formatted box."""
     print(f"""
 ╔══════════════════════════════════════════════╗
 ║                  TimeSync Tool               ║
@@ -259,6 +267,7 @@ def cmd_version(): print(f"TimeSync v{VERSION}")
 # ==================================================
 
 def build_powershell_completion_script():
+    """Builds a PowerShell script for command auto-completion based on the defined top-level commands and action commands. It loads a template script, replaces placeholders with the actual commands, and returns the final script content."""
     top_commands = ", ".join(f"'{cmd}'" for cmd in TOP_LEVEL_COMMANDS)
     action_lines = []
     for name, actions in ACTION_COMMANDS.items():
@@ -283,7 +292,7 @@ def build_powershell_completion_script():
 
 
 def cmd_completion(shell, install=False):
-    
+    """Generates and optionally installs the command auto-completion script for the specified shell. Currently supports PowerShell. If install is True, it adds the script to the user's PowerShell profile; otherwise, it just prints the script content."""
     if shell != "powershell":
         print(error_text(f"Unsupported shell: {shell}"))
         return
@@ -332,6 +341,7 @@ def cmd_completion(shell, install=False):
 # ==================================================
 
 def cmd_cancel():
+    """Creates a cancel file that signals the background sync process to stop. If the file cannot be created, logs an error message."""
     try:
         CANCEL_FILE.touch()
     except Exception as e:
@@ -339,6 +349,7 @@ def cmd_cancel():
 
 
 def cmd_disable_warning():
+    """Updates the settings to disable warnings on manual sync. This is intended to be used as an action for a notification button, allowing users to easily turn off warnings if they find them annoying."""
     settings = load_settings()
     settings["show_warning_on_manual_sync"] = False
     save_settings(settings)
