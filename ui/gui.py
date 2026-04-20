@@ -46,8 +46,15 @@ class TimeSyncGUI(ctk.CTk):
         self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['cmd_logs'](), self.update_status("Status: Opening log file...", "blue")])
         self.open_log_button.grid(row=2, column=0, padx=20, pady=10)
 
-        self.status_label = ctk.CTkLabel(self.sidebar, text=f"{self.internet_status()}", font=ctk.CTkFont(size=12))
-        self.status_label.grid(row=7, column=0, padx=20, pady=20)
+        self.status_label = ctk.CTkLabel(
+            self.sidebar,
+            text=f"{self.internet_status()}",
+            font=ctk.CTkFont(size=12),
+            wraplength=120,
+            justify="center",
+            anchor="center"
+        )
+        self.status_label.grid(row=7, column=0, padx=20, pady=20, sticky="ew")
 
         self.version_label = ctk.CTkLabel(
             self.sidebar,
