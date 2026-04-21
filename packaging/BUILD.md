@@ -10,15 +10,16 @@ This document explains how to build TimeSync using the existing packaging files 
 - Windows 10/11
 - Python 3.10+ (same architecture you target, usually x64)
 - Inno Setup 6 (for `.iss` installer compilation)
-- Optional: `upx.exe` in project root
+- Optional: [upx.exe](https://github.com/upx/upx) in project root
 
 ## 2) Install Python dependencies
 
 From the project root:
 
 ```powershell
-python -m pip install --upgrade pip
-python -m pip install -r packaging/requirements.txt
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
 ## 3) Build executables with PyInstaller
@@ -26,7 +27,7 @@ python -m pip install -r packaging/requirements.txt
 From the project root, run:
 
 ```powershell
-python -m PyInstaller packaging/TimeSync.spec --clean
+PyInstaller packaging/TimeSync.spec --clean
 ```
 
 Expected output folder:
@@ -53,7 +54,7 @@ ISCC packaging/TimeSyncCompiler.iss
 
 Expected installer output:
 
-- `output/TimeSync_Setup.exe`
+- `output/TimeSync_<VERSION>_Setup.exe`
 
 ## 5) Notes about current build files
 

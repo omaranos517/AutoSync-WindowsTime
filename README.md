@@ -56,9 +56,13 @@ This mismatch causes Windows to display the wrong time after rebooting from Linu
 
 ### 🔧 Installation
 
-1. Download the latest installer from Releases (`TimeSync_<version>_Setup.exe`).
+Choose one of the following installation methods:
+
+#### Option 1: Install from the latest release
+
+1. Download the latest installer from [Releases](https://github.com/omaranos517/AutoSync-WindowsTime/releases/latest) (`TimeSync_<version>_Setup.exe`).
 2. Run the installer as Administrator and complete the setup wizard.
-3. (Optional) Keep **Run TimeSync at Windows startup** enabled during setup.
+3. Optional: keep **Run TimeSync at Windows startup** enabled during setup.
 
 The installer will:
 
@@ -68,6 +72,10 @@ The installer will:
 - Optionally enable:
   - Startup sync task
   - Resume-from-sleep sync task
+
+#### Option 2: Build from source
+
+Follow the guide in [packaging/BUILD.md](packaging/BUILD.md).
 
 ---
 
