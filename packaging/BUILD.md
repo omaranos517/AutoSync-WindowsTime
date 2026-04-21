@@ -46,7 +46,7 @@ Compile this script:
 
 - `packaging/TimeSyncCompiler.iss`
 
-You can compile it from Inno Setup GUI, or via command line (if `ISCC.exe` is on PATH):
+You can compile it from [Inno Setup](https://www.jrsoftware.org/isinfo.php) GUI, or via command line (if `ISCC.exe` is on PATH):
 
 ```powershell
 ISCC packaging/TimeSyncCompiler.iss
