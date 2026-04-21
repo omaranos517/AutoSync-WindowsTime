@@ -25,14 +25,17 @@ def sync_windows_time() -> SyncResult:
             raise Exception("Initial sync failed.")
         
     except Exception as e:
-        
-        if fix_w32time_service():
-            if attempt_time_sync():
-                return SyncResult(
-                    success=True,
-                    warning="windows time service was fixed. you may need to restart your PC for changes to take effect.",
-                    warning_actions=[("Restart now", f"{PROTOCOL}://restart-pc")]
-                )
+        try:
+            if fix_w32time_service():
+                if attempt_time_sync():
+                    return SyncResult(
+                        success=True,
+                        warning="windows time service was fixed. you may need to restart your PC for changes to take effect.",
+                        warning_actions=[("Restart now", f"{PROTOCOL}://restart-pc")]
+                    )
+        except Exception as fix_error:
+            print("We couldn't fix the w32time service automatically.")
+            log("ERROR", f"Failed to fix w32time service: {fix_error}", console=True)
     
         if manual_ntp_sync():
             return SyncResult(
@@ -47,12 +50,12 @@ def sync_windows_time() -> SyncResult:
 def attempt_time_sync() -> bool:
     try:
         subprocess.run(
-            "sc config w32time start= auto",
-            shell=True, check=True
+            ["sc", "config", "w32time", "start=", "auto"],
+            check=True
         )
 
-        subprocess.run("net stop w32time", shell=True)
-        subprocess.run("net start w32time", shell=True)
+        subprocess.run(["net", "stop", "w32time"], check=True)
+        subprocess.run(["net", "start", "w32time"], check=True)
 
         peers = (
             "time.google.com,0x1 "
@@ -61,37 +64,26 @@ def attempt_time_sync() -> bool:
         )
 
         subprocess.run(
-            f'w32tm /config /manualpeerlist:"{peers}" '
-            "/syncfromflags:manual /update",
-            shell=True, check=True
+            ["w32tm", "/config", "/manualpeerlist:" + peers, "/syncfromflags:manual", "/update"],
+            check=True
         )
 
-        result = subprocess.run(
-            "w32tm /resync /force",
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode == 0:
-            return True
-        else:
-            print(f"Resync failed with code {result.returncode}: {result.stderr}")
-            return False
+        subprocess.run(["w32tm", "/resync", "/force"], check=True, capture_output=True, text=True)
+        return True
         
     except subprocess.CalledProcessError as e:
-        raise Exception(f"Resync failed with code: {e.stderr.strip()}")
+        raise RuntimeError(f"Resync failed with code: {e.stderr.strip()}")
 
 
 def fix_w32time_service() -> bool:
     try:
         print("🔧 Attempting to fix w32time service...\n")
 
-        subprocess.run("net stop w32time", shell=True)
-        subprocess.run("w32tm /unregister", shell=True)
-        subprocess.run("w32tm /register", shell=True)
-        subprocess.run("sc config w32time start= auto", shell=True)
-        subprocess.run("net start w32time", shell=True)
+        subprocess.run(["net", "stop", "w32time"], check=True)
+        subprocess.run(["w32tm", "/unregister"], check=True)
+        subprocess.run(["w32tm", "/register"], check=True)
+        subprocess.run(["sc", "config", "w32time", "start=", "auto"], check=True)
+        subprocess.run(["net", "start", "w32time"], check=True)
         return True
     
     except Exception as e:

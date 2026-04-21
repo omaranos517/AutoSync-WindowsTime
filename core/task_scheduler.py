@@ -19,13 +19,18 @@ def create_startup_task(executable_path: Path = None):
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startupinfo.wShowWindow = 0
 
-    cmd = (
-        f'schtasks /create /tn "{task_name}" /tr "\\"{executable_path}\\" now --auto" '
-        f'/sc onlogon /rl highest /f /delay 0000:00'
-    )
-    
     try:
-        subprocess.run(cmd, shell=True, check=True, capture_output=True, startupinfo=startupinfo)
+        subprocess.run([
+            "schtasks",
+            "/create",
+            "/tn", task_name,
+            "/tr", f'"{executable_path}" now --auto',
+            "/sc", "onlogon",
+            "/rl", "highest",
+            "/f",
+            "/delay", "0000:00"
+        ], check=True, capture_output=True, text=True, startupinfo=startupinfo)
+
         log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=False)
         
     except subprocess.CalledProcessError as e:
@@ -40,16 +45,19 @@ def create_resume_task(executable_path: Path = None):
 
     task_name = RESUME_TASK_NAME
 
-    cmd = (
-        f'schtasks /create /tn "{task_name}" '
-        f'/tr "\\"{executable_path}\\" now --auto" '
-        f'/sc onevent /ec System '
-        f'/mo "*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]" '
-        f'/rl highest /f'
-    )
-
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        subprocess.run([
+            "schtasks",
+            "/create",
+            "/tn", task_name,
+            "/tr", f'"{executable_path}" now --auto',
+            "/sc", "onevent",
+            "/ec", "System",
+            "/mo", '*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]',
+            "/rl", "highest",
+            "/f"
+        ], check=True, capture_output=True, text=True)
+
         log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=False)
     except subprocess.CalledProcessError as e:
         log("ERROR", f"Failed to create resume task: {e}", console=True)
@@ -59,10 +67,14 @@ def remove_startup_task():
     relaunch_as_admin()
 
     task_name = STARTUP_TASK_NAME
-    cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
         # Suppress output so a missing task does not show noisy errors.
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        subprocess.run([
+            "schtasks",
+            "/delete",
+            "/tn", task_name,
+            "/f"
+        ], check=True, capture_output=True, text=True)
         log("INFO", "Startup task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Startup task not found or already removed.", console=True)
@@ -71,18 +83,25 @@ def remove_startup_task():
 def remove_resume_task():
     relaunch_as_admin()
     task_name = RESUME_TASK_NAME
-    cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
-        subprocess.run(cmd, shell=True, check=True, capture_output=True)
+        subprocess.run([
+            "schtasks",
+            "/delete",
+            "/tn", task_name,
+            "/f"
+        ], check=True, capture_output=True, text=True)
         log("INFO", "Resume task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Resume task not found or already removed.", console=True)
 
 
 def task_exists(task_name):
-    cmd = f'schtasks /query /tn "{task_name}"'
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        result = subprocess.run([
+            "schtasks",
+            "/query",
+            "/tn", task_name
+        ], capture_output=True, text=True)
         return task_name in result.stdout
     except Exception:
         return False
