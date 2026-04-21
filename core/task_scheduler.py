@@ -12,7 +12,7 @@ def create_startup_task(executable_path: Path = None):
     if executable_path is None:
         executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
 
-    # إنشاء مهمة مجدولة تعمل مع دخول المستخدم بأعلى صلاحيات
+    # Create a scheduled task that runs at user logon with highest privileges.
     task_name = STARTUP_TASK_NAME
 
     startupinfo = subprocess.STARTUPINFO()
@@ -61,7 +61,7 @@ def remove_startup_task():
     task_name = STARTUP_TASK_NAME
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     try:
-        # كتم المخرجات لكي لا يظهر خطأ إذا كانت المهمة غير موجودة أصلاً
+        # Suppress output so a missing task does not show noisy errors.
         subprocess.run(cmd, shell=True, check=True, capture_output=True)
         log("INFO", "Startup task removed successfully.", console=False)
     except subprocess.CalledProcessError:

@@ -23,7 +23,7 @@ def log(level, message, console=False):
         }
 
         lines.append(json.dumps(log_entry, ensure_ascii=False) + "\n")
-        # إعادة كتابة كل السطور بعد القص
+        # Rewrite the trimmed log back to disk.
         with open(LOG_FILE, "w", encoding="utf-8") as f:
             f.writelines(lines)
 

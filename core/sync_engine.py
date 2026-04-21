@@ -8,10 +8,10 @@ from .internet_check import is_internet_available
 
 class SyncResult:
     def __init__(self, success, warning=None, warning_actions=None, error=""):
-        self.success = success   # هل نجحت العملية؟ (True/False)
-        self.warning = warning  # هل هناك تحذير؟ (نص التحذير أو None)
-        self.warning_actions = warning_actions if warning else [] # قائمة الإجراءات المرتبطة بالتحذير (مثلاً: [("Don't show again", "app://disable-warning")])
-        self.error = error       # ما هو نص الخطأ لو فشلت؟
+        self.success = success   # Whether the operation succeeded (True/False)
+        self.warning = warning  # Warning message, if any
+        self.warning_actions = warning_actions if warning else [] # Actions associated with the warning
+        self.error = error       # Error message if the operation failed
 
 
 def sync_windows_time() -> SyncResult:

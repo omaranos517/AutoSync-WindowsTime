@@ -5,7 +5,7 @@ def get_parser():
     parser = argparse.ArgumentParser(
         prog="timesync",
         description=f"{APP_NAME} - Windows Time Synchronization Tool",
-        formatter_class=argparse.RawTextHelpFormatter # للحفاظ على تنسيق النصوص في Help
+        formatter_class=argparse.RawTextHelpFormatter # Preserve help text formatting
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")

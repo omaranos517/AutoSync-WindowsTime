@@ -12,7 +12,7 @@ VSVersionInfo(
   kids=[
     StringFileInfo([
       StringTable(
-        '040904B0',  # اللغة والانكويد (English US)
+        '040904B0',  # Language and code page (English US)
         [StringStruct('CompanyName', 'Omar Anoss'),
          StringStruct('FileDescription', 'Windows Time Synchronization Tool'),
          StringStruct('FileVersion', '1.4.0.0'),

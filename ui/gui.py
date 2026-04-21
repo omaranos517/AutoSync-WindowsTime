@@ -3,8 +3,8 @@ import customtkinter as ctk
 
 from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, RESUME_TASK_NAME
 
-# إعداد المظهر العام
-ctk.set_appearance_mode("System")  # يتبع نظام الويندوز (فاتح أو غامق)
+# Global appearance configuration
+ctk.set_appearance_mode("System")  # Follow the Windows light/dark appearance
 ctk.set_default_color_theme("blue") 
 
 class TimeSyncGUI(ctk.CTk):
@@ -16,7 +16,7 @@ class TimeSyncGUI(ctk.CTk):
         self._is_destroyed = False
         self._sync_thread = None
         
-        # إعدادات النافذة
+        # Window configuration
         self.title(APP_NAME)
         icon = APP_DIR / "icon.ico"
         if icon.exists():
@@ -26,7 +26,7 @@ class TimeSyncGUI(ctk.CTk):
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        # إنشاء هيكل النافذة (Sidebar and Main Content)
+        # Build the main window layout (sidebar and main content)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -202,7 +202,7 @@ class TimeSyncGUI(ctk.CTk):
             self.update_status("Status: Notifications disabled", "red")
 
 def run_gui():
-    # هنا نمرر الدوال من الكود الأصلي للواجهة
+    # Pass the existing application functions into the GUI layer.
     from cli.actions import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, cmd_logs
     from config.settings import load_settings
     from core.task_scheduler import task_exists

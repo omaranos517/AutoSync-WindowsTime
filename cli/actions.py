@@ -358,11 +358,11 @@ def cmd_disable_warning():
 
 def cmd_restart_pc():
     """
-    تقوم بإعادة تشغيل الجهاز فوراً.
-    استخدام السويتشات:
-    /r : إعادة تشغيل
-    /t 0 : الوقت المتبقي (صفر ثانية)
-    /f : إجبار إغلاق التطبيقات المفتوحة لضمان عدم تعليق العملية
+    Restart the PC immediately.
+    Switches used:
+    /r : restart
+    /t 0 : remaining time (zero seconds)
+    /f : force-close open applications to prevent the process from hanging
     """
     print("🔌 Restarting PC now...")
     try:

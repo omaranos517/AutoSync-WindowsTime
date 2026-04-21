@@ -22,7 +22,7 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
-# النسخة ذات الطرفية (CLI)
+# Console build (CLI)
 exe_console = EXE(
     pyz,
     a.scripts,
@@ -35,7 +35,7 @@ exe_console = EXE(
     contents_directory='.',
 )
 
-# النسخة بدون طرفية (Background)
+# Windowed build (background/GUI)
 exe_windowed = EXE(
     pyz,
     a.scripts,

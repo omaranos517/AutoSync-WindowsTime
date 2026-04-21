@@ -13,7 +13,7 @@ def relaunch_as_admin():
 
     print("💡 Tip: Run Terminal in Administrator mode for the best experience! 💻")
     
-    # تحضير المسار والوسائط بشكل صحيح
+    # Prepare the executable path and arguments correctly.
     executable = sys.executable
     if getattr(sys, "frozen", False):
         args = sys.argv[1:]
@@ -22,7 +22,7 @@ def relaunch_as_admin():
     
     params = " ".join([f'"{arg}"' for arg in args])
     
-    # تنفيذ كمسؤول
+    # Relaunch with administrator privileges.
     ctypes.windll.shell32.ShellExecuteW(
         None, "runas", executable, params, None, 1
     )

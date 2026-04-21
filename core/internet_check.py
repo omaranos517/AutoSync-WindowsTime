@@ -61,17 +61,17 @@ def is_internet_available(auto_sync=True):
 
     - In manual mode: Returns False immediately with a log.
     """
-    # 1. تحقق سريع: إذا كان الإنترنت متاحاً الآن، اخرج بـ True
+    # 1. Fast check: if internet is already available, return True immediately.
     if has_internet_connection():
         return True
 
-    # 2. إذا لم يتوفر إنترنت، نحدد التصرف بناءً على نوع التشغيل
+    # 2. If there is no connection yet, decide behavior based on the run mode.
     if auto_sync:
-        # وضع التلقائي: ننتظر (دالة wait_for_internet هي التي تقرر النجاح أو الفشل بعد مهلة)
+        # Automatic mode: wait until connectivity appears or timeout/cancel occurs.
         result = wait_for_internet()
     else:
-        # وضع اليدوي: فشل فوري
+        # Manual mode: fail immediately.
         result = False
 
-    # 3. إعادة النتيجة النهائية (True أو False)
+    # 3. Return the final availability result.
     return result
