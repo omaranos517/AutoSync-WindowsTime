@@ -7,6 +7,13 @@ from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, RESUME_TASK_NA
 ctk.set_appearance_mode("System")  # Follow the Windows light/dark appearance
 ctk.set_default_color_theme("blue") 
 
+# Custom colors
+# VARIABLE_NAME = (light_mode_color, dark_mode_color)
+INFO_BLUE = ("#4B6B8A", "#A9C4E2")
+SUCCESS_GREEN = ("#2E7D4F", "#7FDFA1")
+WARNING_AMBER = ("#A56A00", "#E7C15A")
+ERROR_RED = ("#A94442", "#E58B8B")
+
 class TimeSyncGUI(ctk.CTk):
     def __init__(self, main_logic_functions):
         super().__init__()
@@ -43,7 +50,7 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_button = ctk.CTkButton(self.sidebar, text="Sync Now", command=self.handle_sync)
         self.sync_button.grid(row=1, column=0, padx=20, pady=10)
 
-        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['cmd_logs'](), self.update_status("Status: Opening log file...", "blue")])
+        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['cmd_logs'](), self.update_status("Status: Opening log file...", INFO_BLUE)])
         self.open_log_button.grid(row=2, column=0, padx=20, pady=10)
 
         self.status_label = ctk.CTkLabel(
@@ -144,7 +151,7 @@ class TimeSyncGUI(ctk.CTk):
 
         self.sync_in_progress = True
         self.sync_button.configure(state="disabled")
-        self.status_label.configure(text="Status: Syncing...", text_color="orange")
+        self.status_label.configure(text="Status: Syncing...", text_color=WARNING_AMBER)
 
         self._sync_thread = threading.Thread(target=self._sync_worker)
         self._sync_thread.start()
@@ -153,13 +160,13 @@ class TimeSyncGUI(ctk.CTk):
         try:
             sync_result = self.logic['cmd_now']()
 
-            color = "green" if "Success" in sync_result else "red"
-            if "Warning" in sync_result: color = "orange"
+            color = SUCCESS_GREEN if "Success" in sync_result else ERROR_RED
+            if "Warning" in sync_result: color = WARNING_AMBER
 
             self.update_status(sync_result, color)
             
         except Exception:
-            self.update_status("Status: Failed", "red")
+            self.update_status("Status: Failed", ERROR_RED)
         finally:
             if not self._is_destroyed:
                 self.after(0, self._finish_sync)
@@ -174,32 +181,32 @@ class TimeSyncGUI(ctk.CTk):
 
     def open_about_window(self):
         from .about_window import open_about_window
-        self.update_status("Status: Opening About Window...", "blue")
+        self.update_status("Status: Opening About Window...", INFO_BLUE)
         open_about_window(self)
 
     def toggle_startup(self, switch):
         if switch.get():
             self.logic['cmd_toggle_startup']("enable")
-            self.update_status("Status: Startup sync enabled", "green")
+            self.update_status("Status: Startup sync enabled", SUCCESS_GREEN)
         else:
             self.logic['cmd_toggle_startup']("disable")
-            self.update_status("Status: Startup sync disabled", "red")
+            self.update_status("Status: Startup sync disabled", ERROR_RED)
 
     def toggle_resume(self, switch):
         if switch.get():
             self.logic['cmd_toggle_resume']("enable")
-            self.update_status("Status: Resume sync enabled", "green")
+            self.update_status("Status: Resume sync enabled", SUCCESS_GREEN)
         else:
             self.logic['cmd_toggle_resume']("disable")
-            self.update_status("Status: Resume sync disabled", "red")
+            self.update_status("Status: Resume sync disabled", ERROR_RED)
 
     def toggle_notifications(self, switch):
         if switch.get():
             self.logic['cmd_toggle_notify']("enable")
-            self.update_status("Status: Notifications enabled", "green")
+            self.update_status("Status: Notifications enabled", SUCCESS_GREEN)
         else:
             self.logic['cmd_toggle_notify']("disable")
-            self.update_status("Status: Notifications disabled", "red")
+            self.update_status("Status: Notifications disabled", ERROR_RED)
 
 def run_gui():
     # Pass the existing application functions into the GUI layer.
