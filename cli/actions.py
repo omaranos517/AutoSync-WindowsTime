@@ -113,7 +113,7 @@ def cmd_now() -> str:
     from core.sync_engine import check_internet_and_sync
     from utils import send_notification
 
-    result = check_internet_and_sync(auto_sync="--auto" in sys.argv)
+    result = check_internet_and_sync(silent="--auto" in sys.argv)
 
     if result.success:
         print(success_text("✅ Time synchronized successfully!"))
