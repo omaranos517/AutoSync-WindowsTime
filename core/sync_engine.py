@@ -3,6 +3,7 @@ import ctypes
 
 from config import PROTOCOL
 from utils.admin import relaunch_as_admin
+from utils import log, run_cmd
 
 from .internet_check import is_internet_available
 
@@ -14,20 +15,20 @@ class SyncResult:
         self.error = error       # Error message if the operation failed
 
 
-def sync_windows_time() -> SyncResult:
+def sync_windows_time(silent=True) -> SyncResult:
     relaunch_as_admin()
     try:
         print("🔄 Syncing Windows time started...\n")
 
-        if attempt_time_sync():
+        if attempt_time_sync(silent):
             return SyncResult(success=True)
         else:
             raise Exception("Initial sync failed.")
         
     except Exception as e:
         try:
-            if fix_w32time_service():
-                if attempt_time_sync():
+            if fix_w32time_service(silent):
+                if attempt_time_sync(silent):
                     return SyncResult(
                         success=True,
                         warning="windows time service was fixed. you may need to restart your PC for changes to take effect.",
@@ -47,15 +48,12 @@ def sync_windows_time() -> SyncResult:
             return SyncResult(success=False, error="Failed to synchronize time.")
 
 
-def attempt_time_sync() -> bool:
+def attempt_time_sync(silent) -> bool:
     try:
-        subprocess.run(
-            ["sc", "config", "w32time", "start=", "auto"],
-            check=True
-        )
+        run_cmd(["sc", "config", "w32time", "start=", "auto"], silent)
 
-        subprocess.run(["net", "stop", "w32time"], check=True)
-        subprocess.run(["net", "start", "w32time"], check=True)
+        run_cmd(["net", "stop", "w32time"], silent)
+        run_cmd(["net", "start", "w32time"], silent)
 
         peers = (
             "time.google.com,0x1 "
@@ -63,27 +61,24 @@ def attempt_time_sync() -> bool:
             "time.windows.com,0x1"
         )
 
-        subprocess.run(
-            ["w32tm", "/config", "/manualpeerlist:" + peers, "/syncfromflags:manual", "/update"],
-            check=True
-        )
+        run_cmd(["w32tm", "/config", "/manualpeerlist:" + peers, "/syncfromflags:manual", "/update"], silent)
 
-        subprocess.run(["w32tm", "/resync", "/force"], check=True, capture_output=True, text=True)
+        run_cmd(["w32tm", "/resync", "/force"], silent)
         return True
         
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Resync failed with code: {e.stderr.strip()}")
 
 
-def fix_w32time_service() -> bool:
+def fix_w32time_service(silent) -> bool:    
     try:
         print("🔧 Attempting to fix w32time service...\n")
 
-        subprocess.run(["net", "stop", "w32time"], check=True)
-        subprocess.run(["w32tm", "/unregister"], check=True)
-        subprocess.run(["w32tm", "/register"], check=True)
-        subprocess.run(["sc", "config", "w32time", "start=", "auto"], check=True)
-        subprocess.run(["net", "start", "w32time"], check=True)
+        run_cmd(["net", "stop", "w32time"], silent)
+        run_cmd(["w32tm", "/unregister"], silent)
+        run_cmd(["w32tm", "/register"], silent)
+        run_cmd(["sc", "config", "w32time", "start=", "auto"], silent)
+        run_cmd(["net", "start", "w32time"], silent)
         return True
     
     except Exception as e:
@@ -142,8 +137,8 @@ def manual_ntp_sync() -> bool:
     return False
 
 
-def check_internet_and_sync(auto_sync=True):
-    if is_internet_available(auto_sync):
-        return sync_windows_time()
+def check_internet_and_sync(silent=True):
+    if is_internet_available(silent):
+        return sync_windows_time(silent)
     else: 
         return SyncResult(success=False, error="No internet connection available to synchronize time.")

@@ -85,7 +85,7 @@ def commands_list():
     """Prints a list of available commands with descriptions. If not running as admin, shows a warning about potential limitations."""
     commands = {
         "now":           "Sync time immediately",
-        "Commands/help": "Show Every available command",
+        "commands/help": "Show Every available command",
         "status":        "Show current status",
         "startup":       "Enable/disable startup sync",
         "resume":        "Enable/disable resume on wake (Sleep/hibernate)",

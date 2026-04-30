@@ -19,7 +19,7 @@ From the project root:
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r packaging/requirements.txt
 ```
 
 ## 3) Build executables with PyInstaller

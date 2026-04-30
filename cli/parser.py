@@ -13,6 +13,7 @@ def get_parser():
     # --- Command: now ---
     now_p = subparsers.add_parser("now", help="Sync time immediately")
     now_p.add_argument("--auto", action="store_true", help="Background sync mode")
+    now_p.add_argument("--silent", action="store_true", help="Background sync mode")
 
     # --- Command: logs / status / about / version / help ---
     subparsers.add_parser("logs", help="Open logs file")
