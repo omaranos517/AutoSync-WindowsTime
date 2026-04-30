@@ -29,8 +29,6 @@ def main():
         "cancel": actions.cmd_cancel,
         "disable-warning": actions.cmd_disable_warning,
         "restart-pc": actions.cmd_restart_pc,
-        "help": actions.commands_list,
-        "commands": actions.commands_list,
         "status": actions.cmd_status,
         "logs": actions.cmd_logs,
         "about": actions.cmd_about,
@@ -39,13 +37,15 @@ def main():
 
     action_commands = {
         "startup": actions.cmd_toggle_startup,
+        "periodic": actions.cmd_toggle_periodic,
         "resume": actions.cmd_toggle_resume,
         "notify": actions.cmd_toggle_notify
     }
 
     if args.command:
-        if args.command == "now":
-            actions.cmd_now()
+        if args.command == "now":            
+            silent = args.auto or args.silent
+            actions.cmd_now(silent=silent, notify=silent)
 
         elif args.command in commands:
             commands[args.command]()

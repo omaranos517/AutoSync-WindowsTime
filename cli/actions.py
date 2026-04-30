@@ -81,45 +81,19 @@ def enabled_disabled_text(enabled):
     return success_text("Enabled") if enabled else error_text("Disabled")
 
 
-def commands_list():
-    """Prints a list of available commands with descriptions. If not running as admin, shows a warning about potential limitations."""
-    commands = {
-        "now":           "Sync time immediately",
-        "commands/help": "Show Every available command",
-        "status":        "Show current status",
-        "startup":       "Enable/disable startup sync",
-        "resume":        "Enable/disable resume on wake (Sleep/hibernate)",
-        "notify":        "Enable/disable notifications",
-        "logs":          "Open logs file",
-        "about":         "Show info about TimeSync",
-        "version":       "Show version"
-    }
-
-    max_len = max(len(cmd) for cmd in commands.keys()) + 2
-
-    print("\n=== TimeSync Commands ===\n")
-    for command, description in commands.items():
-        print(f"{command:<{max_len}} - {description}")
-
-    print("\nUse 'timesync <command> -h' for more info on each command.")
-
-    if not is_admin():
-        print(f"\n{warning_text('⚠️ TimeSync is not running as Administrator. Some commands may not work As expected. Please run the terminal as Administrator for the best experience.')}")
-
-
-def cmd_now() -> str:
+def cmd_now(silent=False, notify=False) -> str:
     """Main command to sync time immediately. Returns a status message indicating success, failure, or any warnings."""
     print(info_text("🔄 Syncing time now..."))
     from core.sync_engine import check_internet_and_sync
     from utils import send_notification
 
-    result = check_internet_and_sync(silent="--auto" in sys.argv)
+    result = check_internet_and_sync(silent=silent, notify=notify)
 
     if result.success:
         print(success_text("✅ Time synchronized successfully!"))
         log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
         
-        if "--auto" in sys.argv:
+        if notify:
             send_notification(
                 "Time Sync Success",
                 "✅ Time synchronized successfully.",
@@ -129,7 +103,7 @@ def cmd_now() -> str:
         
         if result.warning:
             print(warning_text(f"⚠️ Warning: {result.warning}"))
-            if "--auto" in sys.argv:
+            if notify:
                 send_notification(
                     "Time Sync Warning",
                     f"⚠️ {result.warning}",
@@ -142,12 +116,13 @@ def cmd_now() -> str:
         return "Success: Time synchronized successfully."
     else:
         print(error_text(f"❌ Time synchronization failed: {result.error}"))
-        send_notification(
-            "Time Sync Failed",
-            f"❌ Time synchronization failed: {result.error}",
-            tag="sync-status",
-            group="sync-status"
-        )
+        if notify:
+            send_notification(
+                "Time Sync Failed",
+                f"❌ Time synchronization failed: {result.error}",
+                tag="sync-status",
+                group="sync-status"
+            )
         log("SYNC_FAILED", f"Time synchronization failed: {result.error}", console=False)
         return f"Failed: {result.error}"
 
@@ -159,6 +134,7 @@ def cmd_status():
 
     print(success_text("🔐 Running as Administrator") if is_admin() else warning_text("⚠️ Not running as Administrator"))
     print(f"🚀 Startup with Windows: {enabled_disabled_text(task_exists(STARTUP_TASK_NAME))}")
+    print(f"🕐 Periodic Hourly Sync: {info_text("Coming soon")}")
     print(f"💤 Sync on Wake: {enabled_disabled_text(task_exists(RESUME_TASK_NAME))}")
     print(f"🔔 Notifications: {enabled_disabled_text(load_settings().get('notifications', True))}")
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
@@ -208,6 +184,20 @@ def cmd_toggle_startup(action=None):
         remove_startup_task,
         "Startup"
     )
+
+
+def cmd_toggle_periodic(action=None):
+    """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
+    # TODO Implement periodic sync using the task scheduler. This would involve creating a scheduled task that runs TimeSync at regular intervals (e.g., every hour). The toggle_feature function can be reused here by providing appropriate exists_fn, enable_fn, and disable_fn that interact with the task scheduler to manage the periodic sync task.
+    print(info_text("Periodic sync feature is not implemented yet."))
+    # from core.task_scheduler import task_exists, create_periodic_task, remove_periodic_task
+    # toggle_feature(
+    #     action,
+    #     lambda: task_exists(PERIODIC_TASK_NAME),
+    #     lambda: create_periodic_task(_protocol_exe_path()),
+    #     remove_periodic_task,
+    #     "Periodic Sync"
+    # )
 
 
 def cmd_toggle_resume(action=None):

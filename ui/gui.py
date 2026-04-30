@@ -158,7 +158,7 @@ class TimeSyncGUI(ctk.CTk):
 
     def _sync_worker(self):
         try:
-            sync_result = self.logic['cmd_now']()
+            sync_result = self.logic['cmd_now'](silent=True)
 
             color = SUCCESS_GREEN if "Success" in sync_result else ERROR_RED
             if "Warning" in sync_result: color = WARNING_AMBER

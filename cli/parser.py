@@ -16,25 +16,23 @@ def get_parser():
     now_p.add_argument("--silent", action="store_true", help="Background sync mode")
 
     # --- Command: logs / status / about / version / help ---
-    subparsers.add_parser("logs", help="Open logs file")
     subparsers.add_parser("status", help="Show current sync status")
+    subparsers.add_parser("logs", help="Open logs file")
     subparsers.add_parser("about", help="Show info about TimeSync")
     subparsers.add_parser("version", help="Show version")
-    subparsers.add_parser("commands", help="Show available commands")
-    subparsers.add_parser("help", help="Show detailed commands list")
     
     # --- Hidden Commands ---
-    subparsers.add_parser("cancel", help=argparse.SUPPRESS) 
-    subparsers.add_parser("disable-warning", help=argparse.SUPPRESS)
-    subparsers.add_parser("restart-pc", help=argparse.SUPPRESS)
+    subparsers.add_parser("cancel") 
+    subparsers.add_parser("disable-warning")
+    subparsers.add_parser("restart-pc")
 
     # --- Commands with Actions (startup, resume, notify) ---
-    for cmd_name in ["startup", "resume", "notify"]:
-        cmd_p = subparsers.add_parser(cmd_name, help=f"Manage {cmd_name} features")
+    for cmd_name, cmd_help in {"startup" : "This feature manages the startup sync task", "periodic" : "This feature manages the periodic sync task", "resume" : "This feature manages the resume sync task", "notify" : "This feature manages the notifications for TimeSync"}.items():
+        cmd_p = subparsers.add_parser(cmd_name, help=cmd_help)
         cmd_p.add_argument(
-            "action", 
-            nargs="?", 
-            choices=["status", "enable", "disable"], 
+            "action",
+            nargs="?",
+            choices=["status", "enable", "disable"],
             default="status",
             help="Action to perform"
         )

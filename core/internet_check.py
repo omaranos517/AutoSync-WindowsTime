@@ -17,25 +17,26 @@ def has_internet_connection():
     return False
 
 
-def wait_for_internet():
+def wait_for_internet(notify=True):
     """Wait for an internet connection to become available, with user cancellation support."""
     from time import sleep
     for i in range(300): # 10 minutes max wait
         if CANCEL_FILE.exists():
             CANCEL_FILE.unlink(missing_ok=True)
-            send_notification(
-                "Time Sync Cancelled",
-                "❌ Sync process cancelled.",
-                tag="sync-cancelled",
-                group="sync-cancelled"
-            )
+            if notify:
+                send_notification(
+                    "Time Sync Cancelled",
+                    "❌ Sync process cancelled.",
+                    tag="sync-cancelled",
+                    group="sync-cancelled"
+                )
             log("INFO", "Time sync cancelled by user.", console=False)
             return False
 
         if has_internet_connection():
             return True
 
-        if i == 5:
+        if notify and i == 5:
             send_notification(
                 "No Internet Connection",
                 "⏳ Waiting for internet connection...",
@@ -51,7 +52,7 @@ def wait_for_internet():
     return False
 
 
-def is_internet_available(auto_sync=True):
+def is_internet_available(auto_sync=True, notify=True):
     """
     Internet Check:
 
@@ -68,7 +69,7 @@ def is_internet_available(auto_sync=True):
     # 2. If there is no connection yet, decide behavior based on the run mode.
     if auto_sync:
         # Automatic mode: wait until connectivity appears or timeout/cancel occurs.
-        result = wait_for_internet()
+        result = wait_for_internet(notify=notify)
     else:
         # Manual mode: fail immediately.
         result = False

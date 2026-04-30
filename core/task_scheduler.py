@@ -30,7 +30,7 @@ def create_startup_task(executable_path: Path = None):
             "/f",
             "/delay", "0000:00"
         ])
-        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=True)
+        log("INFO", "Startup task created in Task Scheduler (Admin Privileges)", console=False)
         
     except subprocess.CalledProcessError as e:
         log("ERROR", f"Failed to create startup task: {e}", console=True)
@@ -57,7 +57,7 @@ def create_resume_task(executable_path: Path = None):
             "/f"
         ])
 
-        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=True)
+        log("INFO", "Resume task created in Task Scheduler (Admin Privileges)", console=False)
     except subprocess.CalledProcessError as e:
         log("ERROR", f"Failed to create resume task: {e}", console=True)
 
@@ -75,7 +75,7 @@ def remove_startup_task():
             "/f"
         ])
 
-        log("INFO", "Startup task removed successfully.", console=True)
+        log("INFO", "Startup task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Startup task not found or already removed.", console=True)
 
@@ -91,7 +91,7 @@ def remove_resume_task():
             "/f"
         ])
 
-        log("INFO", "Resume task removed successfully.", console=True)
+        log("INFO", "Resume task removed successfully.", console=False)
     except subprocess.CalledProcessError:
         log("ERROR", "Resume task not found or already removed.", console=True)
 

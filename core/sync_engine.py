@@ -137,8 +137,8 @@ def manual_ntp_sync() -> bool:
     return False
 
 
-def check_internet_and_sync(silent=True):
-    if is_internet_available(silent):
+def check_internet_and_sync(silent=True, notify=True):
+    if is_internet_available(silent, notify=notify):
         return sync_windows_time(silent)
     else: 
         return SyncResult(success=False, error="No internet connection available to synchronize time.")
