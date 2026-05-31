@@ -30,6 +30,15 @@ This mismatch causes Windows to display the wrong time after rebooting from Linu
 
 ---
 
+## Documentation
+
+If you want the project to be easier to understand and maintain, start here:
+
+- [Project structure](docs/project-structure.md) - what each folder/file is for
+- [Build guide](docs/BUILD.md) - how to package the app
+
+---
+
 ## ✨ Key Features
 
 - ✅ **One-Click Repair**  
@@ -75,7 +84,7 @@ The installer will:
 
 #### Option 2: Build from source
 
-Follow the guide in [packaging/BUILD.md](packaging/BUILD.md).
+Follow the guide in [docs/BUILD.md](docs/BUILD.md).
 
 ---
 

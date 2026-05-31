@@ -1,9 +1,12 @@
-# Build Guide (Current Packaging Files)
+# Build Guide
 
-This document explains how to build TimeSync using the existing packaging files in this repository:
+This document explains how to build TimeSync from source using the current packaging files.
 
-- `packaging/TimeSync.spec` (PyInstaller)
-- `packaging/TimeSyncCompiler.iss` (Inno Setup installer)
+## Packaging Files
+
+- `packaging/TimeSync.spec` - PyInstaller build definition
+- `packaging/TimeSyncCompiler.iss` - Inno Setup installer definition
+- `packaging/requirements.txt` - build dependencies
 
 ## 1) Prerequisites
 
@@ -17,8 +20,8 @@ This document explains how to build TimeSync using the existing packaging files 
 From the project root:
 
 ```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv env
+.\env\Scripts\Activate.ps1
 pip install -r packaging/requirements.txt
 ```
 
@@ -62,4 +65,3 @@ Expected installer output:
 - `TimeSyncCompiler.iss` packages files from `dist/TimeSync/*`.
 - Installer metadata (name/version/publisher) is defined at the top of `TimeSyncCompiler.iss`.
 - Installer currently requires Administrator privileges (`PrivilegesRequired=admin`).
-
