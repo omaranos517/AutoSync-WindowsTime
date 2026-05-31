@@ -30,7 +30,7 @@ exe_console = EXE(
     exclude_binaries=True,
     name='timesync-cli',
     icon=str(project_root / 'assets' / 'icon.ico'),
-    version=str(project_root / 'version_info.txt'),
+    version=str(project_root / 'packaging' / 'version_info.txt'),
     console=True,
     contents_directory='.',
 )
@@ -43,7 +43,7 @@ exe_windowed = EXE(
     exclude_binaries=True,
     name='timesync-gui',
     icon=str(project_root / 'assets' / 'icon.ico'),
-    version=str(project_root / 'version_info.txt'),
+    version=str(project_root / 'packaging' / 'version_info.txt'),
     console=False,
     contents_directory='.',
 )
