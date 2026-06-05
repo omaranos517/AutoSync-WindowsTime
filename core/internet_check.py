@@ -11,16 +11,18 @@ def has_internet_connection():
             try:
                 with create_connection(target, timeout=5):
                     return True
-            except (OSError, TimeoutError, ConnectionRefusedError):
+            except (OSError, TimeoutError):
                 continue
-    log("INFO", "No internet connection detected.", console=False)
     return False
 
 
 def wait_for_internet(notify=True):
     """Wait for an internet connection to become available, with user cancellation support."""
-    from time import sleep
-    for i in range(300): # 10 minutes max wait
+    from time import sleep, monotonic
+    start_time = monotonic()
+    max_wait_time = start_time + 600 # 10 minutes max wait
+    notify_sent = False
+    while monotonic() < max_wait_time:
         if CANCEL_FILE.exists():
             CANCEL_FILE.unlink(missing_ok=True)
             if notify:
@@ -36,7 +38,8 @@ def wait_for_internet(notify=True):
         if has_internet_connection():
             return True
 
-        if notify and i == 5:
+        if notify and not notify_sent and monotonic() - start_time >= 180:
+            notify_sent = True
             send_notification(
                 "No Internet Connection",
                 "⏳ Waiting for internet connection...",
@@ -69,10 +72,7 @@ def is_internet_available(auto_sync=True, notify=True):
     # 2. If there is no connection yet, decide behavior based on the run mode.
     if auto_sync:
         # Automatic mode: wait until connectivity appears or timeout/cancel occurs.
-        result = wait_for_internet(notify=notify)
-    else:
-        # Manual mode: fail immediately.
-        result = False
-
-    # 3. Return the final availability result.
-    return result
+        return wait_for_internet(notify=notify)
+    
+    log("INFO", "No internet connection detected.", console=False)
+    return False

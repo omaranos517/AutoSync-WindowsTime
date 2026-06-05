@@ -12,7 +12,7 @@ This document explains how to build TimeSync from source using the current packa
 
 - Windows 10/11
 - Python 3.10+ (same architecture you target, usually x64)
-- Inno Setup 6 (for `.iss` installer compilation)
+- [Inno Setup](https://www.jrsoftware.org/isinfo.php) 6 (for `.iss` installer compilation)
 - Optional: [upx.exe](https://github.com/upx/upx) in project root
 
 ## 2) Install Python dependencies

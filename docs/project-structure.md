@@ -48,7 +48,7 @@ This guide explains what each folder in the repository is for and where new file
 
 - `utils/admin.py` - admin elevation helpers
 - `utils/command_runner.py` - command execution helpers
-- `utils/logging.py` - logging setup and log file handling
+- `utils/app_logger.py` - logging setup and log file handling
 - `utils/notifySystem.py` - Windows notification helpers
 - `utils/protocol.py` - custom protocol handling for app actions
 

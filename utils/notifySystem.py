@@ -1,6 +1,6 @@
 from winotify import Notification, audio
 
-from .logging import log
+from .app_logger import log
 from config.settings import load_settings
 from config import APP_ID
 
