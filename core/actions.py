@@ -1,9 +1,9 @@
 import os
-import sys
 import ctypes
 from pathlib import Path
 
 from utils import log, is_admin, _protocol_exe_path
+from utils.console import success_text, error_text, warning_text, info_text, enabled_disabled_text
 from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 from config.settings import load_settings, save_settings
 
@@ -27,61 +27,7 @@ ACTION_COMMANDS = {
     "notify": ["status", "enable", "disable"],
 }
 
-class Color:
-    DEFFAULT = "\033[0m"
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    CYAN = "\033[96m"
-
-
-def enable_ansi_colors():
-    if os.name != "nt":
-        return
-
-    try:
-        handle = ctypes.windll.kernel32.GetStdHandle(-11)
-        if handle == 0:
-            return
-
-        mode = ctypes.c_uint()
-        if ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)) == 0:
-            return
-
-        virtual_terminal = 0x0004
-        if mode.value & virtual_terminal:
-            return
-
-        ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | virtual_terminal)
-    except Exception:
-        pass
-
-
-def colorize(text, color):
-    return f"{color}{text}{Color.DEFFAULT}"
-
-
-def success_text(text):
-    return colorize(text, Color.GREEN)
-
-
-def error_text(text):
-    return colorize(text, Color.RED)
-
-
-def warning_text(text):
-    return colorize(text, Color.YELLOW)
-
-
-def info_text(text):
-    return colorize(text, Color.CYAN)
-
-
-def enabled_disabled_text(enabled):
-    return success_text("Enabled") if enabled else error_text("Disabled")
-
-
-def cmd_now(silent=False, notify=False) -> str:
+def sync_time_action(silent : bool = False, notify : bool = False) -> str:
     """Main command to sync time immediately. Returns a status message indicating success, failure, or any warnings."""
     print(info_text("🔄 Syncing time now..."))
     from core.sync_engine import check_internet_and_sync
@@ -127,7 +73,7 @@ def cmd_now(silent=False, notify=False) -> str:
         return f"Failed: {result.error}"
 
 
-def cmd_status():
+def get_status():
     """Shows the current status of TimeSync, including whether it's running as administrator, if startup and resume tasks are enabled, and if notifications are on. Also provides a reminder about the graphical interface and where to find logs."""
     from core.task_scheduler import task_exists
     print("\n=== TimeSync Status ===\n")
@@ -142,7 +88,7 @@ def cmd_status():
     print("\n")
 
 
-def cmd_logs():
+def open_logs():
     """Opens the log file in the default text editor. If the log file doesn't exist, shows a warning message."""
     print(info_text("Logs file opening..."))
     try:
@@ -174,7 +120,7 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
     print(f"{icon} {name} {status_text}")
 
 
-def cmd_toggle_startup(action=None):
+def toggle_startup(action=None):
     """Enables, disables, or shows the status of the startup sync feature. Uses the task scheduler to create or remove a task that runs TimeSync on Windows startup."""
     from core.task_scheduler import task_exists, create_startup_task, remove_startup_task
     toggle_feature(
@@ -186,7 +132,7 @@ def cmd_toggle_startup(action=None):
     )
 
 
-def cmd_toggle_periodic(action=None):
+def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
     # TODO Implement periodic sync using the task scheduler. This would involve creating a scheduled task that runs TimeSync at regular intervals (e.g., every hour). The toggle_feature function can be reused here by providing appropriate exists_fn, enable_fn, and disable_fn that interact with the task scheduler to manage the periodic sync task.
     print(info_text("Periodic sync feature is not implemented yet."))
@@ -200,7 +146,7 @@ def cmd_toggle_periodic(action=None):
     # )
 
 
-def cmd_toggle_resume(action=None):
+def toggle_resume(action=None):
     """Enables, disables, or shows the status of the resume on wake feature. Uses the task scheduler to create or remove a task that runs TimeSync when the computer wakes from sleep or hibernate."""
     from core.task_scheduler import task_exists, create_resume_task, remove_resume_task
     toggle_feature(
@@ -212,7 +158,7 @@ def cmd_toggle_resume(action=None):
     )
 
 
-def cmd_toggle_notify(action=None):
+def toggle_notify(action=None):
     """Enables, disables, or shows the status of notifications. Updates the settings file to reflect the new state and prints the current status."""
     settings = load_settings()
     current = settings.get("notifications", True)
@@ -330,7 +276,7 @@ def cmd_completion(shell, install=False):
 # notifications actions
 # ==================================================
 
-def cmd_cancel():
+def create_cancel_file():
     """Creates a cancel file that signals the background sync process to stop. If the file cannot be created, logs an error message."""
     try:
         CANCEL_FILE.touch()
@@ -338,7 +284,7 @@ def cmd_cancel():
         log("ERROR", f"Failed to create cancel file: {e}", console=False)
 
 
-def cmd_disable_warning():
+def disable_warning_action():
     """Updates the settings to disable warnings on manual sync. This is intended to be used as an action for a notification button, allowing users to easily turn off warnings if they find them annoying."""
     settings = load_settings()
     settings["show_warning_on_manual_sync"] = False
@@ -346,7 +292,7 @@ def cmd_disable_warning():
     log("INFO", "Warning on manual sync has been disabled.", console=False)
 
 
-def cmd_restart_pc():
+def restart_pc():
     """
     Restart the PC immediately.
     Switches used:

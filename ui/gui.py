@@ -50,7 +50,7 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_button = ctk.CTkButton(self.sidebar, text="Sync Now", command=self.handle_sync)
         self.sync_button.grid(row=1, column=0, padx=20, pady=10)
 
-        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['cmd_logs'](), self.update_status("Status: Opening log file...", INFO_BLUE)])
+        self.open_log_button = ctk.CTkButton(self.sidebar, text="Open Log File", command=lambda: [self.logic['open_logs'](), self.update_status("Status: Opening log file...", INFO_BLUE)])
         self.open_log_button.grid(row=2, column=0, padx=20, pady=10)
 
         self.status_label = ctk.CTkLabel(
@@ -158,7 +158,7 @@ class TimeSyncGUI(ctk.CTk):
 
     def _sync_worker(self):
         try:
-            sync_result = self.logic['cmd_now'](silent=True)
+            sync_result = self.logic['sync_time_action'](silent=True)
 
             color = SUCCESS_GREEN if "Success" in sync_result else ERROR_RED
             if "Warning" in sync_result: color = WARNING_AMBER
@@ -186,43 +186,43 @@ class TimeSyncGUI(ctk.CTk):
 
     def toggle_startup(self, switch):
         if switch.get():
-            self.logic['cmd_toggle_startup']("enable")
+            self.logic['toggle_startup']("enable")
             self.update_status("Status: Startup sync enabled", SUCCESS_GREEN)
         else:
-            self.logic['cmd_toggle_startup']("disable")
+            self.logic['toggle_startup']("disable")
             self.update_status("Status: Startup sync disabled", ERROR_RED)
 
     def toggle_resume(self, switch):
         if switch.get():
-            self.logic['cmd_toggle_resume']("enable")
+            self.logic['toggle_resume']("enable")
             self.update_status("Status: Resume sync enabled", SUCCESS_GREEN)
         else:
-            self.logic['cmd_toggle_resume']("disable")
+            self.logic['toggle_resume']("disable")
             self.update_status("Status: Resume sync disabled", ERROR_RED)
 
     def toggle_notifications(self, switch):
         if switch.get():
-            self.logic['cmd_toggle_notify']("enable")
+            self.logic['toggle_notify']("enable")
             self.update_status("Status: Notifications enabled", SUCCESS_GREEN)
         else:
-            self.logic['cmd_toggle_notify']("disable")
+            self.logic['toggle_notify']("disable")
             self.update_status("Status: Notifications disabled", ERROR_RED)
 
 def run_gui():
     # Pass the existing application functions into the GUI layer.
-    from cli.actions import cmd_now, cmd_toggle_startup, cmd_toggle_resume, cmd_toggle_notify, cmd_logs
+    from core.actions import sync_time_action, toggle_startup, toggle_resume, toggle_notify, open_logs
     from config.settings import load_settings
     from core.task_scheduler import task_exists
     from core.internet_check import has_internet_connection
     
     logic_map = {
-        'cmd_now': cmd_now,
-        'cmd_logs': cmd_logs,
-        'cmd_toggle_startup': cmd_toggle_startup,
+        'sync_time_action': sync_time_action,
+        'open_logs': open_logs,
+        'toggle_startup': toggle_startup,
         'task_exists': task_exists,
-        'cmd_toggle_resume': cmd_toggle_resume,
+        'toggle_resume': toggle_resume,
         'load_settings': load_settings,
-        'cmd_toggle_notify': cmd_toggle_notify,
+        'toggle_notify': toggle_notify,
         'has_internet_connection': has_internet_connection
     }
     

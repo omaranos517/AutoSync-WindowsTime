@@ -8,7 +8,7 @@ from utils import log, run_cmd
 from .internet_check import is_internet_available
 
 class SyncResult:
-    def __init__(self, success, warning=None, warning_actions=None, error=""):
+    def __init__(self, success: bool, warning: str = None, warning_actions: list = None, error: str = ""):
         self.success = success   # Whether the operation succeeded (True/False)
         self.warning = warning  # Warning message, if any
         self.warning_actions = warning_actions if warning else [] # Actions associated with the warning

@@ -5,6 +5,7 @@ This guide explains what each folder in the repository is for and where new file
 ## Root
 
 - `README.md` - the main landing page for the project
+- `main.py` - the application entry point that launches the app
 - `docs/` - full documentation
 - `assets/` - icons, scripts, and packaged resources used by the app
 - `cli/` - command-line parsing and command dispatch
@@ -26,7 +27,7 @@ This guide explains what each folder in the repository is for and where new file
 ### `cli/`
 
 - `cli/parser.py` - defines the command-line arguments and subcommands
-- `cli/actions.py` - implements the CLI actions such as sync, status, logs, and feature toggles
+- `cli/dispatcher.py` - routes parsed CLI commands to the appropriate handler or action
 
 ### `config/`
 
@@ -35,6 +36,7 @@ This guide explains what each folder in the repository is for and where new file
 
 ### `core/`
 
+- `core/actions.py` - high-level actions such as syncing, status checks, and related operations
 - `core/sync_engine.py` - the main sync flow and fallback logic
 - `core/internet_check.py` - checks whether the machine is online before syncing
 - `core/task_scheduler.py` - creates, removes, and checks scheduled tasks
@@ -49,6 +51,7 @@ This guide explains what each folder in the repository is for and where new file
 - `utils/admin.py` - admin elevation helpers
 - `utils/command_runner.py` - command execution helpers
 - `utils/app_logger.py` - logging setup and log file handling
+- `utils/console.py` - helper functions for enabling ANSI colors in the console and formatting text with success, error, warning, and info styles
 - `utils/notifySystem.py` - Windows notification helpers
 - `utils/protocol.py` - custom protocol handling for app actions
 
@@ -57,6 +60,7 @@ This guide explains what each folder in the repository is for and where new file
 - `packaging/TimeSync.spec` - PyInstaller spec file
 - `packaging/TimeSyncCompiler.iss` - Inno Setup installer script
 - `packaging/requirements.txt` - build-time Python dependencies
+- `packaging/version_info.txt` - version metadata used by the Windows packaging workflow
 
 ## Where To Put New Files
 

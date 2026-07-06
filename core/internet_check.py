@@ -65,14 +65,11 @@ def is_internet_available(auto_sync=True, notify=True):
 
     - In manual mode: Returns False immediately with a log.
     """
-    # 1. Fast check: if internet is already available, return True immediately.
-    if has_internet_connection():
-        return True
 
+    # 1. Fast check: if internet is already available, return True immediately.
+    if has_internet_connection(): return True
     # 2. If there is no connection yet, decide behavior based on the run mode.
-    if auto_sync:
-        # Automatic mode: wait until connectivity appears or timeout/cancel occurs.
-        return wait_for_internet(notify=notify)
-    
+    if auto_sync and wait_for_internet(notify=notify): return True
+
     log("INFO", "No internet connection detected.", console=False)
     return False
