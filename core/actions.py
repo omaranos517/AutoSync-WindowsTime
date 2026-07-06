@@ -2,9 +2,9 @@ import os
 import ctypes
 from pathlib import Path
 
-from utils import log, is_admin, _protocol_exe_path
+from utils import log, is_admin
 from utils.console import success_text, error_text, warning_text, info_text, enabled_disabled_text
-from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+from config import APP_DIR, STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
 from config.settings import load_settings, save_settings
 
 
@@ -100,7 +100,7 @@ def open_logs():
         print(error_text(f"Failed to open logs: {e}"))
 
 
-def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
+def _toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
     """Generic function to toggle a feature on/off based on the provided action. It checks the current state using exists_fn, enables or disables the feature accordingly, and then prints the new status."""
     if action == "enable":
         enable_fn()
@@ -123,10 +123,10 @@ def toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
 def toggle_startup(action=None):
     """Enables, disables, or shows the status of the startup sync feature. Uses the task scheduler to create or remove a task that runs TimeSync on Windows startup."""
     from core.task_scheduler import task_exists, create_startup_task, remove_startup_task
-    toggle_feature(
+    _toggle_feature(
         action,
         lambda: task_exists(STARTUP_TASK_NAME),
-        lambda: create_startup_task(_protocol_exe_path()),
+        lambda: create_startup_task(),
         remove_startup_task,
         "Startup"
     )
@@ -134,25 +134,24 @@ def toggle_startup(action=None):
 
 def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
-    # TODO Implement periodic sync using the task scheduler. This would involve creating a scheduled task that runs TimeSync at regular intervals (e.g., every hour). The toggle_feature function can be reused here by providing appropriate exists_fn, enable_fn, and disable_fn that interact with the task scheduler to manage the periodic sync task.
     print(info_text("Periodic sync feature is not implemented yet."))
-    # from core.task_scheduler import task_exists, create_periodic_task, remove_periodic_task
-    # toggle_feature(
-    #     action,
-    #     lambda: task_exists(PERIODIC_TASK_NAME),
-    #     lambda: create_periodic_task(_protocol_exe_path()),
-    #     remove_periodic_task,
-    #     "Periodic Sync"
-    # )
+    from core.task_scheduler import task_exists, create_periodic_task, remove_periodic_task
+    _toggle_feature(
+        action,
+        lambda: task_exists(PERIODIC_TASK_NAME),
+        lambda: create_periodic_task(),
+        remove_periodic_task,
+        "Periodic Sync"
+    )
 
 
 def toggle_resume(action=None):
     """Enables, disables, or shows the status of the resume on wake feature. Uses the task scheduler to create or remove a task that runs TimeSync when the computer wakes from sleep or hibernate."""
     from core.task_scheduler import task_exists, create_resume_task, remove_resume_task
-    toggle_feature(
+    _toggle_feature(
         action,
         lambda: task_exists(RESUME_TASK_NAME),
-        lambda: create_resume_task(_protocol_exe_path()),
+        lambda: create_resume_task(),
         remove_resume_task,
         "Resume"
     )

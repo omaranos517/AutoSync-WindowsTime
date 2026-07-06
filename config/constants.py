@@ -5,8 +5,9 @@ from sys import executable
 APP_NAME = "TimeSync"
 APP_ID = "OmarAnoss.TimeSync"
 PROTOCOL = "timesync"
-RESUME_TASK_NAME = "TimeSync_resume"
 STARTUP_TASK_NAME = "TimeSync_startup"
+RESUME_TASK_NAME = "TimeSync_resume"
+PERIODIC_TASK_NAME = "TimeSync_periodic"
 
 APP_DIR = Path(executable).parent
 DATA_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME

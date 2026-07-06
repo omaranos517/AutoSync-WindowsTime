@@ -1,7 +1,7 @@
 import threading
 import customtkinter as ctk
 
-from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, RESUME_TASK_NAME
+from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME
 
 # Global appearance configuration
 ctk.set_appearance_mode("System")  # Follow the Windows light/dark appearance
@@ -104,7 +104,8 @@ class TimeSyncGUI(ctk.CTk):
         notifications_enabled = settings.get("notifications", True)
 
         self.create_setting_card("Run at Startup", self.logic['task_exists'](STARTUP_TASK_NAME), self.toggle_startup)
-        self.create_setting_card("Sync on Wake (Resume)", self.logic['task_exists'](RESUME_TASK_NAME), self.toggle_resume)
+        self.create_setting_card("Periodic Sync (Hourly)", self.logic['task_exists'](PERIODIC_TASK_NAME), self.toggle_periodic)
+        self.create_setting_card("Sync on Wake (Wake from Sleep/Hibernation)", self.logic['task_exists'](RESUME_TASK_NAME), self.toggle_resume)
         self.create_setting_card("Show Notifications", notifications_enabled, self.toggle_notifications)
 
     def create_setting_card(self, text, initial_state, command):
@@ -179,38 +180,34 @@ class TimeSyncGUI(ctk.CTk):
         if not self._is_destroyed:
             self.sync_button.configure(state="normal")
 
+    def _toggle_feature(self, feature_name : str, switch):
+        if switch.get():
+            self.logic[f'toggle_{feature_name}']("enable")
+            self.update_status(f"Status: {feature_name.capitalize()} sync enabled", SUCCESS_GREEN)
+        else:
+            self.logic[f'toggle_{feature_name}']("disable")
+            self.update_status(f"Status: {feature_name.capitalize()} sync disabled", ERROR_RED)
+
     def open_about_window(self):
         from .about_window import open_about_window
         self.update_status("Status: Opening About Window...", INFO_BLUE)
         open_about_window(self)
 
     def toggle_startup(self, switch):
-        if switch.get():
-            self.logic['toggle_startup']("enable")
-            self.update_status("Status: Startup sync enabled", SUCCESS_GREEN)
-        else:
-            self.logic['toggle_startup']("disable")
-            self.update_status("Status: Startup sync disabled", ERROR_RED)
+        self._toggle_feature("startup", switch)
+
+    def toggle_periodic(self, switch):
+        self._toggle_feature("periodic", switch)
 
     def toggle_resume(self, switch):
-        if switch.get():
-            self.logic['toggle_resume']("enable")
-            self.update_status("Status: Resume sync enabled", SUCCESS_GREEN)
-        else:
-            self.logic['toggle_resume']("disable")
-            self.update_status("Status: Resume sync disabled", ERROR_RED)
+        self._toggle_feature("resume", switch)
 
     def toggle_notifications(self, switch):
-        if switch.get():
-            self.logic['toggle_notify']("enable")
-            self.update_status("Status: Notifications enabled", SUCCESS_GREEN)
-        else:
-            self.logic['toggle_notify']("disable")
-            self.update_status("Status: Notifications disabled", ERROR_RED)
+        self._toggle_feature("notifications", switch)
 
 def run_gui():
     # Pass the existing application functions into the GUI layer.
-    from core.actions import sync_time_action, toggle_startup, toggle_resume, toggle_notify, open_logs
+    from core.actions import sync_time_action, toggle_startup, toggle_periodic, toggle_resume, toggle_notify, open_logs
     from config.settings import load_settings
     from core.task_scheduler import task_exists
     from core.internet_check import has_internet_connection
@@ -219,10 +216,11 @@ def run_gui():
         'sync_time_action': sync_time_action,
         'open_logs': open_logs,
         'toggle_startup': toggle_startup,
-        'task_exists': task_exists,
+        'toggle_periodic': toggle_periodic,
         'toggle_resume': toggle_resume,
+        'task_exists': task_exists,
         'load_settings': load_settings,
-        'toggle_notify': toggle_notify,
+        'toggle_notifications': toggle_notify,
         'has_internet_connection': has_internet_connection
     }
     
