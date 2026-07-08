@@ -28,6 +28,7 @@ This guide explains what each folder in the repository is for and where new file
 
 - `cli/parser.py` - defines the command-line arguments and subcommands
 - `cli/dispatcher.py` - routes parsed CLI commands to the appropriate handler or action
+- `cli/commands.py` - contains the actual CLI command handlers and command mapping
 
 ### `config/`
 

@@ -1,31 +1,11 @@
 import os
 import ctypes
-from pathlib import Path
 
 from utils import log, is_admin
-from utils.console import success_text, error_text, warning_text, info_text, enabled_disabled_text
-from config import APP_DIR, STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE, AUTHOR, VERSION, GITHUB
+from utils.console import success_text, error_text, warning_text, info_text
+from config import STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE
 from config.settings import load_settings, save_settings
 
-
-TOP_LEVEL_COMMANDS = [
-    "now",
-    "logs",
-    "help",
-    "commands",
-    "status",
-    "startup",
-    "resume",
-    "notify",
-    "about",
-    "version",
-]
-
-ACTION_COMMANDS = {
-    "startup": ["status", "enable", "disable"],
-    "resume": ["status", "enable", "disable"],
-    "notify": ["status", "enable", "disable"],
-}
 
 def sync_time_action(silent : bool = False, notify : bool = False) -> str:
     """Main command to sync time immediately. Returns a status message indicating success, failure, or any warnings."""
@@ -73,19 +53,21 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
         return f"Failed: {result.error}"
 
 
-def get_status():
+def get_status() -> dict:
     """Shows the current status of TimeSync, including whether it's running as administrator, if startup and resume tasks are enabled, and if notifications are on. Also provides a reminder about the graphical interface and where to find logs."""
     from core.task_scheduler import task_exists
-    print("\n=== TimeSync Status ===\n")
-
-    print(success_text("🔐 Running as Administrator") if is_admin() else warning_text("⚠️ Not running as Administrator"))
-    print(f"🚀 Startup with Windows: {enabled_disabled_text(task_exists(STARTUP_TASK_NAME))}")
-    print(f"🕐 Periodic Hourly Sync: {info_text("Coming soon")}")
-    print(f"💤 Sync on Wake: {enabled_disabled_text(task_exists(RESUME_TASK_NAME))}")
-    print(f"🔔 Notifications: {enabled_disabled_text(load_settings().get('notifications', True))}")
-    print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
-    print("\nFor more details, check the log file at:", LOG_FILE)
-    print("\n")
+    isAdmin = is_admin()
+    startUp = task_exists(STARTUP_TASK_NAME)
+    periodic = task_exists(PERIODIC_TASK_NAME)
+    resume = task_exists(RESUME_TASK_NAME)
+    notify = load_settings().get('notifications', True)
+    return {
+        'isAdmin' : isAdmin,
+        'startUp' : startUp,
+        'periodic' : periodic,
+        'resume' : resume,
+        'notify' : notify
+        }
 
 
 def open_logs():
@@ -100,8 +82,9 @@ def open_logs():
         print(error_text(f"Failed to open logs: {e}"))
 
 
-def _toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
+def _toggle_feature(action, task_name, enable_fn, disable_fn, name):
     """Generic function to toggle a feature on/off based on the provided action. It checks the current state using exists_fn, enables or disables the feature accordingly, and then prints the new status."""
+    from core.task_scheduler import task_exists
     if action == "enable":
         enable_fn()
     elif action == "disable":
@@ -109,12 +92,12 @@ def _toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
     elif action == "status":
         pass
     else:  # toggle
-        if exists_fn():
+        if task_exists(task_name):
             disable_fn()
         else:
             enable_fn()
 
-    is_enabled = exists_fn()
+    is_enabled = task_exists(task_name)
     status_text = success_text("enabled") if is_enabled else error_text("disabled")
     icon = "✅" if is_enabled else "❌"
     print(f"{icon} {name} {status_text}")
@@ -122,10 +105,10 @@ def _toggle_feature(action, exists_fn, enable_fn, disable_fn, name):
 
 def toggle_startup(action=None):
     """Enables, disables, or shows the status of the startup sync feature. Uses the task scheduler to create or remove a task that runs TimeSync on Windows startup."""
-    from core.task_scheduler import task_exists, create_startup_task, remove_startup_task
+    from core.task_scheduler import create_startup_task, remove_startup_task
     _toggle_feature(
         action,
-        lambda: task_exists(STARTUP_TASK_NAME),
+        STARTUP_TASK_NAME,
         lambda: create_startup_task(),
         remove_startup_task,
         "Startup"
@@ -135,10 +118,10 @@ def toggle_startup(action=None):
 def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
     print(info_text("Periodic sync feature is not implemented yet."))
-    from core.task_scheduler import task_exists, create_periodic_task, remove_periodic_task
+    from core.task_scheduler import create_periodic_task, remove_periodic_task
     _toggle_feature(
         action,
-        lambda: task_exists(PERIODIC_TASK_NAME),
+        PERIODIC_TASK_NAME,
         lambda: create_periodic_task(),
         remove_periodic_task,
         "Periodic Sync"
@@ -147,10 +130,10 @@ def toggle_periodic(action=None):
 
 def toggle_resume(action=None):
     """Enables, disables, or shows the status of the resume on wake feature. Uses the task scheduler to create or remove a task that runs TimeSync when the computer wakes from sleep or hibernate."""
-    from core.task_scheduler import task_exists, create_resume_task, remove_resume_task
+    from core.task_scheduler import create_resume_task, remove_resume_task
     _toggle_feature(
         action,
-        lambda: task_exists(RESUME_TASK_NAME),
+        RESUME_TASK_NAME,
         lambda: create_resume_task(),
         remove_resume_task,
         "Resume"
@@ -174,102 +157,6 @@ def toggle_notify(action=None):
     is_enabled = settings["notifications"]
     status = success_text("enabled") if is_enabled else error_text("disabled")
     print(f"🔔 Notifications {status}.")
-
-
-def cmd_about():
-    """Prints information about the TimeSync tool, including version, author, and GitHub link, in a formatted box."""
-    print(f"""
-╔══════════════════════════════════════════════╗
-║                  TimeSync Tool               ║
-╠══════════════════════════════════════════════╣
-║
-║  Version  : {VERSION}V
-║  Author   : {AUTHOR}
-║  GitHub   : {GITHUB}
-║
-╠══════════════════════════════════════════════╣
-║        Windows Time Synchronization Tool     ║
-╚══════════════════════════════════════════════╝
-""")
-
-
-def cmd_version(): print(f"TimeSync v{VERSION}")
-
-
-
-# ==================================================
-# AUTO COMANDS 
-# ==================================================
-
-def build_powershell_completion_script():
-    """Builds a PowerShell script for command auto-completion based on the defined top-level commands and action commands. It loads a template script, replaces placeholders with the actual commands, and returns the final script content."""
-    top_commands = ", ".join(f"'{cmd}'" for cmd in TOP_LEVEL_COMMANDS)
-    action_lines = []
-    for name, actions in ACTION_COMMANDS.items():
-        quoted_actions = ", ".join("'" + action + "'" for action in actions)
-        action_lines.append(f"    {name} = @({quoted_actions})")
-    action_map = "\n".join(action_lines)
-    template_candidates = [
-        APP_DIR / "timesync-completion.ps1",
-        Path(__file__).resolve().parent / "assets" / "timesync-completion.ps1",
-    ]
-
-    template_path = next((path for path in template_candidates if path.exists()), None)
-    if not template_path:
-        raise FileNotFoundError("timesync-completion.ps1 template was not found.")
-
-    template = template_path.read_text(encoding="utf-8")
-    return (
-        template
-        .replace("__TOP_LEVEL_COMMANDS__", top_commands)
-        .replace("__ACTION_MAP__", action_map)
-    )
-
-
-def cmd_completion(shell, install=False):
-    """Generates and optionally installs the command auto-completion script for the specified shell. Currently supports PowerShell. If install is True, it adds the script to the user's PowerShell profile; otherwise, it just prints the script content."""
-    if shell != "powershell":
-        print(error_text(f"Unsupported shell: {shell}"))
-        return
-
-    script = build_powershell_completion_script()
-
-    if not install:
-        print(script)
-        return
-
-    start_marker = "# >>> TimeSync autocomplete >>>"
-    end_marker = "# <<< TimeSync autocomplete <<<"
-    block = f"{start_marker}\n{script.rstrip()}\n{end_marker}\n"
-    profile_paths = [
-        Path.home() / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1",
-        Path.home() / "Documents" / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1",
-    ]
-
-    installed_paths = []
-    for profile_path in profile_paths:
-        profile_path.parent.mkdir(parents=True, exist_ok=True)
-
-        existing = profile_path.read_text(encoding="utf-8") if profile_path.exists() else ""
-        if start_marker in existing and end_marker in existing:
-            start_index = existing.index(start_marker)
-            end_index = existing.index(end_marker) + len(end_marker)
-            existing = existing[:start_index].rstrip() + "\n\n" + existing[end_index:].lstrip()
-
-        new_content = existing.rstrip()
-        if new_content:
-            new_content += "\n\n"
-        new_content += block
-
-        profile_path.write_text(new_content, encoding="utf-8")
-        installed_paths.append(profile_path)
-
-    print(success_text("PowerShell autocomplete installed to:"))
-    for profile_path in installed_paths:
-        print(f"- {profile_path}")
-    print(info_text("Restart PowerShell, or run one of:"))
-    for profile_path in installed_paths:
-        print(f". '{profile_path}'")
 
 # ==================================================
 # notifications actions

@@ -1,24 +1,7 @@
 from .parser import get_parser
 from utils.console import enable_ansi_colors
 from core import actions
-
-
-COMMANDS = {
-    "cancel": actions.create_cancel_file,
-    "disable-warning": actions.disable_warning_action,
-    "restart-pc": actions.restart_pc,
-    "status": actions.get_status,
-    "logs": actions.open_logs,
-    "about": actions.cmd_about,
-    "version": actions.cmd_version,
-}
-
-ACTION_COMMANDS = {
-    "startup": actions.toggle_startup,
-    "periodic": actions.toggle_periodic,
-    "resume": actions.toggle_resume,
-    "notify": actions.toggle_notify,
-}
+from .commands import COMMANDS, ACTION_COMMANDS, cmd_completion
 
 
 def run_cli():
@@ -33,7 +16,8 @@ def run_cli():
 
     if args.command == "now":
         silent = args.auto or args.silent
-        actions.sync_time_action(silent=silent, notify=silent)
+        notify = args.notify
+        actions.sync_time_action(silent=silent, notify=notify)
 
     elif args.command in COMMANDS:
         COMMANDS[args.command]()
@@ -42,4 +26,4 @@ def run_cli():
         ACTION_COMMANDS[args.command](args.action or "status")
 
     elif args.command == "completion":
-        actions.cmd_completion(args.shell, install=args.install)
+        cmd_completion(args.shell, install=args.install)

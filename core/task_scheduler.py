@@ -4,17 +4,17 @@ from utils.admin import relaunch_as_admin
 from utils import log, run_cmd
 from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, PERIODIC_TASK_NAME
 
-def _create_task(task_name: str, trigger_type: str, trigger_args: list[str]):
+def _create_task(task_name: str, trigger_type: str, trigger_args: list[str], notify : bool = False):
     relaunch_as_admin()
 
-    executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup. This also allows us to show notifications if needed during startup sync.
-
+    executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup.
+    # command = f'"{executable_path}" now --silent --notify' if notify else f'"{executable_path}" now --silent'
     try:
         run_cmd([
             "schtasks",
             "/create",
             "/tn", task_name,
-            "/tr", f'"{executable_path}" now --silent',
+            "/tr", f'"{executable_path}" now --silent' + (" --notify" if notify else ""),
             "/sc", trigger_type,
             *trigger_args,
             "/rl", "highest",
@@ -51,7 +51,7 @@ def create_periodic_task():
 
 
 def create_resume_task():
-    _create_task(RESUME_TASK_NAME, "onevent", ["/ec", "System", "/mo", '*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]'])
+    _create_task(RESUME_TASK_NAME, "onevent", ["/ec", "System", "/mo", '*[System[Provider[@Name=\'Power-Troubleshooter\'] and EventID=1]]'], True)
 
 
 def remove_startup_task():

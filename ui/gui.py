@@ -100,13 +100,15 @@ class TimeSyncGUI(ctk.CTk):
         self.main_label.pack(pady=(0, 20), anchor="w")
 
         # --- Switches (Cards) ---
-        settings = self.logic['load_settings']()
-        notifications_enabled = settings.get("notifications", True)
+        # settings = self.logic['load_settings']()
+        # notifications_enabled = settings.get("notifications", True)
 
-        self.create_setting_card("Run at Startup", self.logic['task_exists'](STARTUP_TASK_NAME), self.toggle_startup)
-        self.create_setting_card("Periodic Sync (Hourly)", self.logic['task_exists'](PERIODIC_TASK_NAME), self.toggle_periodic)
-        self.create_setting_card("Sync on Wake (Wake from Sleep/Hibernation)", self.logic['task_exists'](RESUME_TASK_NAME), self.toggle_resume)
-        self.create_setting_card("Show Notifications", notifications_enabled, self.toggle_notifications)
+        status = self.logic['get_stetus']()
+
+        self.create_setting_card("Run at Startup", status['startUp'], self.toggle_startup)
+        self.create_setting_card("Periodic Sync (Hourly)", status['periodic'], self.toggle_periodic)
+        self.create_setting_card("Sync on Wake (Sleep/Hibernation)", status['resume'], self.toggle_resume)
+        self.create_setting_card("Show Notifications", status['notify'], self.toggle_notifications)
 
     def create_setting_card(self, text, initial_state, command):
         card = ctk.CTkFrame(self.main_frame, fg_color=("#E5E5E5", "#2B2B2B"))
@@ -207,9 +209,7 @@ class TimeSyncGUI(ctk.CTk):
 
 def run_gui():
     # Pass the existing application functions into the GUI layer.
-    from core.actions import sync_time_action, toggle_startup, toggle_periodic, toggle_resume, toggle_notify, open_logs
-    from config.settings import load_settings
-    from core.task_scheduler import task_exists
+    from core.actions import sync_time_action, get_status, toggle_startup, toggle_periodic, toggle_resume, toggle_notify, open_logs
     from core.internet_check import has_internet_connection
     
     logic_map = {
@@ -218,8 +218,7 @@ def run_gui():
         'toggle_startup': toggle_startup,
         'toggle_periodic': toggle_periodic,
         'toggle_resume': toggle_resume,
-        'task_exists': task_exists,
-        'load_settings': load_settings,
+        'get_status': get_status,
         'toggle_notifications': toggle_notify,
         'has_internet_connection': has_internet_connection
     }

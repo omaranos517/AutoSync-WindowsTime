@@ -14,6 +14,7 @@ def get_parser():
     now_p = subparsers.add_parser("now", help="Sync time immediately")
     now_p.add_argument("--auto", action="store_true", help="Background sync mode")
     now_p.add_argument("--silent", action="store_true", help="Background sync mode")
+    now_p.add_argument("--notify", action="store_true", help="Background sync mode")
 
     # --- Command: logs / status / about / version / help ---
     subparsers.add_parser("status", help="Show current sync status")
