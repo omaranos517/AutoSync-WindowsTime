@@ -41,6 +41,7 @@ This guide explains what each folder in the repository is for and where new file
 - `core/sync_engine.py` - the main sync flow and fallback logic
 - `core/internet_check.py` - checks whether the machine is online before syncing
 - `core/task_scheduler.py` - creates, removes, and checks scheduled tasks
+- `core/timezones.py` - resolves country/capital time zones to Windows time zone IDs using live offset matching
 
 ### `ui/`
 
