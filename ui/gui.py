@@ -103,12 +103,27 @@ class TimeSyncGUI(ctk.CTk):
         # settings = self.logic['load_settings']()
         # notifications_enabled = settings.get("notifications", True)
 
-        status = self.logic['get_stetus']()
+        status = self.logic['get_status']()
 
         self.create_setting_card("Run at Startup", status['startUp'], self.toggle_startup)
         self.create_setting_card("Periodic Sync (Hourly)", status['periodic'], self.toggle_periodic)
         self.create_setting_card("Sync on Wake (Sleep/Hibernation)", status['resume'], self.toggle_resume)
         self.create_setting_card("Show Notifications", status['notify'], self.toggle_notifications)
+
+        self.timezone_frame = ctk.CTkFrame(self.main_frame, fg_color=("#F0F0F0", "#2A2A2A"))
+        self.timezone_frame.pack(fill="x", pady=(12, 5), padx=5)
+
+        self.timezone_label = ctk.CTkLabel(self.timezone_frame, text="Windows Time Zone", font=ctk.CTkFont(size=14, weight="bold"))
+        self.timezone_label.pack(anchor="w", padx=16, pady=(12, 6))
+
+        self.timezone_option_menu = ctk.CTkOptionMenu(
+            self.timezone_frame,
+            values=status.get('timezone_options', []),
+            command=self.apply_timezone,
+            width=260,
+        )
+        self.timezone_option_menu.pack(fill="x", padx=16, pady=(0, 12))
+        self.timezone_option_menu.set(status.get('timezone', 'UTC'))
 
     def create_setting_card(self, text, initial_state, command):
         card = ctk.CTkFrame(self.main_frame, fg_color=("#E5E5E5", "#2B2B2B"))
@@ -207,9 +222,16 @@ class TimeSyncGUI(ctk.CTk):
     def toggle_notifications(self, switch):
         self._toggle_feature("notifications", switch)
 
+    def apply_timezone(self, selected_timezone):
+        try:
+            applied_timezone = self.logic['set_timezone'](selected_timezone)
+            self.update_status(f"Status: Time zone set to {applied_timezone}", SUCCESS_GREEN)
+        except Exception as exc:
+            self.update_status(f"Status: Failed to set time zone ({exc})", ERROR_RED)
+
 def run_gui():
     # Pass the existing application functions into the GUI layer.
-    from core.actions import sync_time_action, get_status, toggle_startup, toggle_periodic, toggle_resume, toggle_notify, open_logs
+    from core.actions import sync_time_action, get_status, toggle_startup, toggle_periodic, toggle_resume, toggle_notify, open_logs, set_timezone
     from core.internet_check import has_internet_connection
     
     logic_map = {
@@ -220,7 +242,8 @@ def run_gui():
         'toggle_resume': toggle_resume,
         'get_status': get_status,
         'toggle_notifications': toggle_notify,
-        'has_internet_connection': has_internet_connection
+        'has_internet_connection': has_internet_connection,
+        'set_timezone': set_timezone
     }
     
     app = TimeSyncGUI(logic_map)

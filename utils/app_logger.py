@@ -32,10 +32,10 @@ def log(level, message, console=False):
         
     level_upper = level.upper()
     if level_upper == "INFO":
-        logger.info(message)
+        logger.info(message, stacklevel=2)
     elif level_upper == "WARNING":
-        logger.warning(message)
+        logger.warning(message, stacklevel=2)
     elif level_upper == "ERROR":
-        logger.error(message)
+        logger.error(message, stacklevel=2)
     else:
-        logger.debug(message)
+        logger.debug(message, stacklevel=2)

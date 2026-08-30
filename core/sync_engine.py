@@ -67,7 +67,8 @@ def attempt_time_sync(silent) -> bool:
         return True
         
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Resync failed with code: {e.stderr.strip()}")
+        stderr = e.stderr.strip() if e.stderr else str(e)
+        raise RuntimeError(f"Resync failed with code: {stderr}")
 
 
 def fix_w32time_service(silent) -> bool:    

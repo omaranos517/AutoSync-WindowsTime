@@ -4,7 +4,14 @@ import ctypes
 from utils import log, is_admin
 from utils.console import success_text, error_text, warning_text, info_text
 from config import STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE
-from config.settings import load_settings, save_settings
+from config.settings import (
+    load_settings,
+    save_settings,
+    get_current_windows_timezone,
+    get_timezone_id,
+    get_timezone_label,
+    get_timezone_options,
+)
 
 
 def sync_time_action(silent : bool = False, notify : bool = False) -> str:
@@ -61,12 +68,15 @@ def get_status() -> dict:
     periodic = task_exists(PERIODIC_TASK_NAME)
     resume = task_exists(RESUME_TASK_NAME)
     notify = load_settings().get('notifications', True)
+    current_timezone = get_current_windows_timezone()
     return {
         'isAdmin' : isAdmin,
         'startUp' : startUp,
         'periodic' : periodic,
         'resume' : resume,
-        'notify' : notify
+        'notify' : notify,
+        'timezone': get_timezone_label(current_timezone),
+        'timezone_options': get_timezone_options(),
         }
 
 
@@ -117,7 +127,6 @@ def toggle_startup(action=None):
 
 def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
-    print(info_text("Periodic sync feature is not implemented yet."))
     from core.task_scheduler import create_periodic_task, remove_periodic_task
     _toggle_feature(
         action,
@@ -176,6 +185,20 @@ def disable_warning_action():
     settings["show_warning_on_manual_sync"] = False
     save_settings(settings)
     log("INFO", "Warning on manual sync has been disabled.", console=False)
+
+
+def set_timezone(timezone_name):
+    """Apply the selected Windows timezone without saving it in app settings."""
+    import subprocess
+
+    timezone_id = get_timezone_id(timezone_name)
+    try:
+        subprocess.run(["tzutil", "/s", timezone_id], check=True, capture_output=True, text=True)
+        log("INFO", f"Timezone changed to {timezone_id}", console=True)
+        return get_timezone_label(timezone_id)
+    except Exception as exc:
+        log("ERROR", f"Failed to apply timezone with tzutil: {exc}", console=True)
+        raise
 
 
 def restart_pc():
