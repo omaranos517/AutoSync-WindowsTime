@@ -28,7 +28,7 @@ class TimeSyncGUI(ctk.CTk):
         icon = APP_DIR / "icon.ico"
         if icon.exists():
             self.iconbitmap(str(icon))
-        self.geometry("600x450")
+        self.geometry("650x500")
         self.minsize(520, 250)
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
