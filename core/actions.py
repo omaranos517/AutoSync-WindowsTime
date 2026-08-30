@@ -4,10 +4,10 @@ import ctypes
 from utils import log, is_admin
 from utils.console import success_text, error_text, warning_text, info_text
 from config import STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE
-from config.settings import (
-    load_settings,
-    save_settings,
+from config.settings import load_settings, save_settings
+from core.timezones import (
     get_current_windows_timezone,
+    find_timezone_matches,
     get_timezone_id,
     get_timezone_label,
     get_timezone_options,
@@ -60,7 +60,7 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
         return f"Failed: {result.error}"
 
 
-def get_status() -> dict:
+def get_status(include_timezone_options=True) -> dict:
     """Shows the current status of TimeSync, including whether it's running as administrator, if startup and resume tasks are enabled, and if notifications are on. Also provides a reminder about the graphical interface and where to find logs."""
     from core.task_scheduler import task_exists
     isAdmin = is_admin()
@@ -69,15 +69,17 @@ def get_status() -> dict:
     resume = task_exists(RESUME_TASK_NAME)
     notify = load_settings().get('notifications', True)
     current_timezone = get_current_windows_timezone()
-    return {
+    status = {
         'isAdmin' : isAdmin,
         'startUp' : startUp,
         'periodic' : periodic,
         'resume' : resume,
         'notify' : notify,
         'timezone': get_timezone_label(current_timezone),
-        'timezone_options': get_timezone_options(),
         }
+    if include_timezone_options:
+        status['timezone_options'] = get_timezone_options()
+    return status
 
 
 def open_logs():
@@ -199,6 +201,22 @@ def set_timezone(timezone_name):
     except Exception as exc:
         log("ERROR", f"Failed to apply timezone with tzutil: {exc}", console=True)
         raise
+
+
+def get_timezone_status():
+    windows_timezone_id = get_current_windows_timezone()
+    return {
+        "windows_id": windows_timezone_id,
+        "label": get_timezone_label(windows_timezone_id),
+    }
+
+
+def list_timezones():
+    return get_timezone_options()
+
+
+def search_timezones(query):
+    return find_timezone_matches(query)
 
 
 def restart_pc():

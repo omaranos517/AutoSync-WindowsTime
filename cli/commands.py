@@ -2,7 +2,7 @@ from pathlib import Path
 
 from core import actions
 from config import APP_DIR, AUTHOR, VERSION, GITHUB, LOG_FILE
-from utils.console import success_text, warning_text, enabled_disabled_text
+from utils.console import success_text, error_text, warning_text, info_text, enabled_disabled_text
 
 
 # ==================================================
@@ -14,7 +14,7 @@ from utils.console import success_text, warning_text, enabled_disabled_text
 
 
 def print_status():
-    status = actions.get_status()
+    status = actions.get_status(include_timezone_options=False)
     print("\n=== TimeSync Status ===\n")
 
     print(success_text("🔐 Running as Administrator") if status['isAdmin'] else warning_text("⚠️ Not running as Administrator"))
@@ -22,6 +22,7 @@ def print_status():
     print(f"🕐 Periodic Hourly Sync: {enabled_disabled_text(status['periodic'])}")
     print(f"💤 Sync on Wake: {enabled_disabled_text(status['resume'])}")
     print(f"🔔 Notifications: {enabled_disabled_text(status['notify'])}")
+    print(f"🌍 Windows Time Zone: {status['timezone']}")
     print("\n💡 Just type 'timesync' without arguments to open the Graphical Interface")
     print("\nFor more details, check the log file at:", LOG_FILE)
     print("\n")
@@ -48,6 +49,55 @@ def cmd_version():
     print(f"TimeSync v{VERSION}")
 
 
+def cmd_timezone(action="status", query=None):
+    """Manage Windows timezone from the CLI using the same backend as the GUI."""
+    if action in (None, "status"):
+        status = actions.get_timezone_status()
+        print("\n=== Time Zone Status ===\n")
+        print(f"Time Zone: {status['label']}")
+        print("\n")
+        return
+
+    if action == "list":
+        print("\n=== Supported Time Zones ===\n")
+        for timezone in actions.list_timezones():
+            print(f"- {timezone}")
+        print("\n")
+        return
+
+    if action != "set":
+        print(error_text(f"Unknown timezone action: {action}"))
+        return
+
+    query = (query or "").strip()
+    if not query:
+        print(error_text("Timezone query is required."))
+        return
+
+    matches = actions.search_timezones(query)
+    if not matches:
+        try:
+            applied_timezone = actions.set_timezone(query)
+            print(success_text(f"Time zone set to: {applied_timezone}"))
+        except Exception as exc:
+            print(error_text(f"Failed to set time zone: {exc}"))
+        return
+
+    if len(matches) > 1:
+        print(warning_text(f"Multiple time zones matched '{query}':"))
+        for match in matches:
+            print(f"- {match['label']}")
+        print(info_text("\nUse a more specific country, capital, or IANA timezone."))
+        return
+
+    selected_timezone = matches[0]["label"]
+    try:
+        applied_timezone = actions.set_timezone(selected_timezone)
+        print(success_text(f"Time zone set to: {applied_timezone}"))
+    except Exception as exc:
+        print(error_text(f"Failed to set time zone: {exc}"))
+
+
 # ==================================================
 # AUTO COMMANDS
 # ==================================================
@@ -61,14 +111,17 @@ TOP_LEVEL_COMMANDS = [
     "startup",
     "resume",
     "notify",
+    "timezone",
     "about",
     "version",
 ]
 
 COMPLETION_COMMANDS = {
     "startup": ["status", "enable", "disable"],
+    "periodic": ["status", "enable", "disable"],
     "resume": ["status", "enable", "disable"],
     "notify": ["status", "enable", "disable"],
+    "timezone": ["status", "list", "set"],
 }
 
 

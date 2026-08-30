@@ -1,7 +1,7 @@
 from .parser import get_parser
 from utils.console import enable_ansi_colors
 from core import actions
-from .commands import COMMANDS, ACTION_COMMANDS, cmd_completion
+from .commands import COMMANDS, ACTION_COMMANDS, cmd_completion, cmd_timezone
 
 
 def run_cli():
@@ -24,6 +24,10 @@ def run_cli():
 
     elif args.command in ACTION_COMMANDS:
         ACTION_COMMANDS[args.command](args.action or "status")
+
+    elif args.command == "timezone":
+        query = " ".join(args.timezone) if getattr(args, "timezone", None) else None
+        cmd_timezone(args.tz_action or "status", query=query)
 
     elif args.command == "completion":
         cmd_completion(args.shell, install=args.install)
