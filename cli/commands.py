@@ -87,7 +87,7 @@ def cmd_timezone(action="status", query=None):
         print(warning_text(f"Multiple time zones matched '{query}':"))
         for match in matches:
             print(f"- {match['label']}")
-        print(info_text("\nUse a more specific country, capital, or IANA timezone."))
+        print(info_text("\nUse a more specific Windows time-zone name or ID."))
         return
 
     selected_timezone = matches[0]["label"]

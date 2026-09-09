@@ -6,6 +6,10 @@ from utils.admin import relaunch_as_admin
 from utils import log, run_cmd
 
 from .internet_check import is_internet_available
+from .timezones import (
+    get_current_windows_timezone_online_offset,
+    set_windows_timezone_for_online_offset,
+)
 
 class SyncResult:
     def __init__(self, success: bool, warning: str = None, warning_actions: list = None, error: str = ""):
@@ -20,7 +24,7 @@ def sync_windows_time(silent=True) -> SyncResult:
     try:
         print("🔄 Syncing Windows time started...\n")
 
-        if attempt_time_sync(silent):
+        if _sync_with_timezone_correction(silent):
             return SyncResult(success=True)
         else:
             raise Exception("Initial sync failed.")
@@ -28,7 +32,7 @@ def sync_windows_time(silent=True) -> SyncResult:
     except Exception as e:
         try:
             if fix_w32time_service(silent):
-                if attempt_time_sync(silent):
+                if _sync_with_timezone_correction(silent):
                     return SyncResult(
                         success=True,
                         warning="windows time service was fixed. you may need to restart your PC for changes to take effect.",
@@ -39,6 +43,8 @@ def sync_windows_time(silent=True) -> SyncResult:
             log("ERROR", f"Failed to fix w32time service: {fix_error}", console=True)
     
         if manual_ntp_sync():
+            if _correct_windows_timezone_from_online_offset():
+                manual_ntp_sync()
             return SyncResult(
                 success=True,
                 warning="Time synchronized manually (fallback mode).",
@@ -46,6 +52,50 @@ def sync_windows_time(silent=True) -> SyncResult:
             )
         else:
             return SyncResult(success=False, error="Failed to synchronize time.")
+
+
+def _sync_with_timezone_correction(silent):
+    """Synchronize, correct a detected online offset mismatch, then resync."""
+    if not attempt_time_sync(silent):
+        return False
+    if _correct_windows_timezone_from_online_offset():
+        return attempt_time_sync(silent)
+    return True
+
+
+def _correct_windows_timezone_from_online_offset():
+    """Apply a Windows zone with TimeAPI's current offset, if needed."""
+    timezone_info = get_current_windows_timezone_online_offset()
+    if timezone_info is None:
+        log("WARNING", "Could not verify the Windows time-zone offset online.", console=False)
+        return False
+
+    if timezone_info["matches"]:
+        log(
+            "INFO",
+            f"Time-zone offset verified for {timezone_info['windows_id']} "
+            f"({timezone_info['iana_timezone']}).",
+            console=False,
+        )
+        return False
+
+    target_id = set_windows_timezone_for_online_offset(timezone_info)
+    if target_id is None:
+        log(
+            "WARNING",
+            f"No installed Windows time zone matches TimeAPI's offset for "
+            f"{timezone_info['iana_timezone']}.",
+            console=True,
+        )
+        return False
+
+    log(
+        "INFO",
+        f"Time zone changed from {timezone_info['windows_id']} to {target_id} "
+        "to match TimeAPI's current offset.",
+        console=True,
+    )
+    return True
 
 
 def attempt_time_sync(silent) -> bool:

@@ -119,8 +119,8 @@ Open **CMD** or **PowerShell** and use:
 | `timesync notify enable` | Enable desktop notifications |
 | `timesync notify disable` | Disable desktop notifications |
 | `timesync timezone status` | Show current Windows time zone |
-| `timesync timezone list` | List supported country/capital time zones with current online offsets |
-| `timesync timezone set Egypt` | Set Windows time zone by country, capital, IANA ID, or Windows ID |
+| `timesync timezone list` | List time zones installed in Windows |
+| `timesync timezone set "Egypt Standard Time"` | Set Windows time zone by its display name or Windows ID |
 | `timesync logs` | Open the log file |
 | `timesync about` | Show app information |
 | `timesync version` | Show current version |

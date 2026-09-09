@@ -41,12 +41,12 @@ def get_parser():
     timezone_p = subparsers.add_parser("timezone", help="Manage Windows timezone")
     timezone_subparsers = timezone_p.add_subparsers(dest="tz_action", help="Timezone actions")
     timezone_subparsers.add_parser("status", help="Show current Windows timezone")
-    timezone_subparsers.add_parser("list", help="List supported country timezones")
+    timezone_subparsers.add_parser("list", help="List time zones installed in Windows")
     timezone_set_p = timezone_subparsers.add_parser("set", help="Set Windows timezone")
     timezone_set_p.add_argument(
         "timezone",
         nargs="+",
-        help="Country, capital, IANA timezone, or Windows timezone ID",
+        help="Windows time-zone display name or ID",
     )
 
     # --- Command: completion ---
