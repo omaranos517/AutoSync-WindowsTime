@@ -120,7 +120,7 @@ Open **CMD** or **PowerShell** and use:
 | `timesync notify disable` | Disable desktop notifications |
 | `timesync timezone status` | Show current Windows time zone |
 | `timesync timezone list` | List time zones installed in Windows |
-| `timesync timezone set "Egypt Standard Time"` | Set Windows time zone by its display name or Windows ID |
+| `timesync timezone set <ur_timezone>` | Set Windows time zone by its display name or Windows ID |
 | `timesync logs` | Open the log file |
 | `timesync about` | Show app information |
 | `timesync version` | Show current version |
