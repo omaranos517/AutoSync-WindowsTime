@@ -43,7 +43,7 @@ def _remove_task(task_name: str):
 
 
 def create_startup_task():
-    _create_task(STARTUP_TASK_NAME, "onlogon", ["/delay", "0000:00"])
+    _create_task(STARTUP_TASK_NAME, "onlogon", ["/delay", "0000:00"], True)
 
 
 def create_periodic_task():

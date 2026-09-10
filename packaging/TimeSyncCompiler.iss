@@ -49,10 +49,6 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "
   #define AW "A"
 #endif
 
-type
-  WPARAM = UINT_PTR;
-  LPARAM = INT_PTR;
-
 function SendMessageTimeout(hWnd: HWND; Msg: UINT; wParam: WPARAM; lParam: String; fuFlags: UINT; uTimeout: UINT; var lpdwResult: DWORD): Longint;
   external 'SendMessageTimeout{#AW}@user32.dll stdcall';
 

@@ -5,6 +5,13 @@ from utils import log, is_admin
 from utils.console import success_text, error_text, warning_text, info_text
 from config import STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE
 from config.settings import load_settings, save_settings
+from core.timezones import (
+    get_current_windows_timezone,
+    find_timezone_matches,
+    get_timezone_id,
+    get_timezone_label,
+    get_timezone_options,
+)
 
 
 def sync_time_action(silent : bool = False, notify : bool = False) -> str:
@@ -53,7 +60,7 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
         return f"Failed: {result.error}"
 
 
-def get_status() -> dict:
+def get_status(include_timezone_options=True) -> dict:
     """Shows the current status of TimeSync, including whether it's running as administrator, if startup and resume tasks are enabled, and if notifications are on. Also provides a reminder about the graphical interface and where to find logs."""
     from core.task_scheduler import task_exists
     isAdmin = is_admin()
@@ -61,13 +68,18 @@ def get_status() -> dict:
     periodic = task_exists(PERIODIC_TASK_NAME)
     resume = task_exists(RESUME_TASK_NAME)
     notify = load_settings().get('notifications', True)
-    return {
+    current_timezone = get_current_windows_timezone()
+    status = {
         'isAdmin' : isAdmin,
         'startUp' : startUp,
         'periodic' : periodic,
         'resume' : resume,
-        'notify' : notify
+        'notify' : notify,
+        'timezone': get_timezone_label(current_timezone),
         }
+    if include_timezone_options:
+        status['timezone_options'] = get_timezone_options()
+    return status
 
 
 def open_logs():
@@ -117,7 +129,6 @@ def toggle_startup(action=None):
 
 def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
-    print(info_text("Periodic sync feature is not implemented yet."))
     from core.task_scheduler import create_periodic_task, remove_periodic_task
     _toggle_feature(
         action,
@@ -176,6 +187,36 @@ def disable_warning_action():
     settings["show_warning_on_manual_sync"] = False
     save_settings(settings)
     log("INFO", "Warning on manual sync has been disabled.", console=False)
+
+
+def set_timezone(timezone_name):
+    """Apply the selected Windows timezone without saving it in app settings."""
+    import subprocess
+
+    timezone_id = get_timezone_id(timezone_name)
+    try:
+        subprocess.run(["tzutil", "/s", timezone_id], check=True, capture_output=True, text=True)
+        log("INFO", f"Timezone changed to {timezone_id}", console=True)
+        return get_timezone_label(timezone_id)
+    except Exception as exc:
+        log("ERROR", f"Failed to apply timezone with tzutil: {exc}", console=True)
+        raise
+
+
+def get_timezone_status():
+    windows_timezone_id = get_current_windows_timezone()
+    return {
+        "windows_id": windows_timezone_id,
+        "label": get_timezone_label(windows_timezone_id),
+    }
+
+
+def list_timezones():
+    return get_timezone_options()
+
+
+def search_timezones(query):
+    return find_timezone_matches(query)
 
 
 def restart_pc():
