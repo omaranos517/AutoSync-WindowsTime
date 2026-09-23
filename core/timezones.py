@@ -5,6 +5,8 @@ second, hand-maintained country/IANA table here made it possible for the UI to
 offer a zone that did not match the user's installed Windows rules.
 """
 
+from utils import run_cmd
+
 import json
 import re
 import subprocess
@@ -20,9 +22,7 @@ _WINDOWS_TO_IANA_CACHE = None
 def get_windows_timezone_options():
     """Return ``(display label, Windows ID)`` pairs reported by ``tzutil``."""
     try:
-        result = subprocess.run(
-            ["tzutil", "/l"], check=True, capture_output=True, text=True
-        )
+        result = run_cmd(["tzutil", "/l"])
     except (FileNotFoundError, subprocess.CalledProcessError):
         return []
 
@@ -73,9 +73,7 @@ def get_timezone_label(windows_timezone_id):
 
 def get_current_windows_timezone():
     try:
-        result = subprocess.run(
-            ["tzutil", "/g"], check=True, capture_output=True, text=True
-        )
+        result = run_cmd(["tzutil", "/g"])
         return result.stdout.strip() or "UTC"
     except (FileNotFoundError, subprocess.CalledProcessError):
         return "UTC"
@@ -160,12 +158,7 @@ def set_windows_timezone_for_online_offset(timezone_info):
         "}"
     )
     try:
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", command],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        result = run_cmd(["powershell", "-NoProfile", "-Command", command])
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
 
@@ -188,12 +181,7 @@ def set_windows_timezone_for_online_offset(timezone_info):
 
     target_id = min(candidates)[1]
     try:
-        subprocess.run(
-            ["tzutil", "/s", target_id],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        run_cmd(["tzutil", "/s", target_id])
         return target_id
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None

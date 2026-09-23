@@ -23,7 +23,8 @@ def get_parser():
     subparsers.add_parser("version", help="Show version")
     
     # --- Hidden Commands ---
-    subparsers.add_parser("cancel") 
+    cancel_p = subparsers.add_parser("cancel")
+    cancel_p.add_argument("--session", dest="cancel_session", help=argparse.SUPPRESS)
     subparsers.add_parser("disable-warning")
     subparsers.add_parser("restart-pc")
 

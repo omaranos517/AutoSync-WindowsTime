@@ -1,11 +1,18 @@
+from config import APP_NAME, APP_DIR, VERSION
+
 import threading
 import customtkinter as ctk
+import time
 
-from config import APP_NAME, APP_DIR, VERSION, STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME
 
 # Global appearance configuration
 ctk.set_appearance_mode("System")  # Follow the Windows light/dark appearance
 ctk.set_default_color_theme("blue") 
+
+
+status_ready = "Status: Ready to sync"
+status_no_internet = "Status: No internet connection"
+sync_success = "Status: Time synchronized successfully"
 
 # Custom colors
 # VARIABLE_NAME = (light_mode_color, dark_mode_color)
@@ -22,6 +29,7 @@ class TimeSyncGUI(ctk.CTk):
         self.sync_in_progress = False
         self._is_destroyed = False
         self._sync_thread = None
+        self.stop_event = threading.Event()
         
         # Window configuration
         self.title(APP_NAME)
@@ -55,13 +63,20 @@ class TimeSyncGUI(ctk.CTk):
 
         self.status_label = ctk.CTkLabel(
             self.sidebar,
-            text=f"{self.internet_status()}",
+            text="Status",
             font=ctk.CTkFont(size=12),
             wraplength=120,
             justify="center",
             anchor="center"
         )
         self.status_label.grid(row=7, column=0, padx=20, pady=20, sticky="ew")
+
+        self._status_lock = threading.Lock()
+        self._last_status_time = 0.0
+        self._status_hold = False
+        self.status_interval = 5 
+        self.status_thread = threading.Thread(target=self.monitor_status, daemon=True)
+        self.status_thread.start()
 
         self.version_label = ctk.CTkLabel(
             self.sidebar,
@@ -138,11 +153,19 @@ class TimeSyncGUI(ctk.CTk):
         switch.pack(side="right", padx=20)
 
     def on_closing(self):
+        self.stop_event.set()
         self._is_destroyed = True
         self.destroy()
 
-    def update_status(self, text, color):
+    def update_status(self, text, color, hold = None):
         """Only update status if the window is not destroyed to avoid errors."""
+        if hold is None:
+            hold = color in (ERROR_RED, WARNING_AMBER)
+
+        with self._status_lock:
+            self._last_status_time = time.monotonic()
+            self._status_hold = hold
+
         if not self._is_destroyed:
             self.after(0, lambda: self.status_label.configure(text=text, text_color=color))
         else:
@@ -157,11 +180,28 @@ class TimeSyncGUI(ctk.CTk):
             except ImportError:
                 pass
 
-    def internet_status(self):
-        if self.logic['has_internet_connection']():
-            return "Status: Ready to sync"
-        else:
-            return "Status: No internet connection"
+    def monitor_status(self):
+        while not self.stop_event.is_set():
+            with self._status_lock:
+                elapsed = time.monotonic() - self._last_status_time
+                holding = self._status_hold
+
+            should_check = (
+                not self._sync_thread
+                and not holding
+                and elapsed >= self.status_interval
+            )
+
+            if should_check:
+                if self.logic['has_internet_connection']():
+                    status = status_ready
+                    color = INFO_BLUE
+                else:
+                    status = status_no_internet
+                    color = ERROR_RED
+                self.update_status(status, color, hold=False)
+            self.stop_event.wait(5)
+
 
     def handle_sync(self):
         if self.sync_in_progress:
@@ -178,10 +218,16 @@ class TimeSyncGUI(ctk.CTk):
         try:
             sync_result = self.logic['sync_time_action'](silent=True)
 
-            color = SUCCESS_GREEN if "Success" in sync_result else ERROR_RED
-            if "Warning" in sync_result: color = WARNING_AMBER
-
-            self.update_status(sync_result, color)
+            if sync_result.success:
+                msg = sync_success
+                color = SUCCESS_GREEN
+                if sync_result.warning:
+                    msg = f"Warning: {sync_result.warning}"
+                    color = WARNING_AMBER
+            else:
+                msg = f"Error: {sync_result.error}"
+                color = ERROR_RED
+            self.update_status(msg, color, hold=False)
             
         except Exception:
             self.update_status("Status: Failed", ERROR_RED)
@@ -197,13 +243,16 @@ class TimeSyncGUI(ctk.CTk):
         if not self._is_destroyed:
             self.sync_button.configure(state="normal")
 
-    def _toggle_feature(self, feature_name : str, switch):
-        if switch.get():
-            self.logic[f'toggle_{feature_name}']("enable")
-            self.update_status(f"Status: {feature_name.capitalize()} sync enabled", SUCCESS_GREEN)
-        else:
-            self.logic[f'toggle_{feature_name}']("disable")
-            self.update_status(f"Status: {feature_name.capitalize()} sync disabled", ERROR_RED)
+    def _toggle_feature(self, feature_name: str, switch):
+        action = "enable" if switch.get() else "disable"
+        try:
+            enabled = self.logic[f'toggle_{feature_name}'](action)
+        except Exception as e:
+            switch.toggle()
+            self.update_status(f"Status: Failed to {action} {feature_name} ({e})", ERROR_RED)
+            return
+        color = SUCCESS_GREEN if enabled else ERROR_RED
+        self.update_status(f"Status: {feature_name.capitalize()} {'enabled' if enabled else 'disabled'}", color, hold=False)
 
     def open_about_window(self):
         from .about_window import open_about_window

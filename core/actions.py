@@ -1,8 +1,7 @@
 import os
 import ctypes
 
-from utils import log, is_admin
-from utils.console import success_text, error_text, warning_text, info_text
+from utils import log, is_admin, run_cmd
 from config import STARTUP_TASK_NAME, PERIODIC_TASK_NAME, RESUME_TASK_NAME, CANCEL_FILE, LOG_FILE
 from config.settings import load_settings, save_settings
 from core.timezones import (
@@ -14,18 +13,15 @@ from core.timezones import (
 )
 
 
-def sync_time_action(silent : bool = False, notify : bool = False) -> str:
+def sync_time_action(silent : bool = False, notify : bool = False) -> object:
     """Main command to sync time immediately. Returns a status message indicating success, failure, or any warnings."""
-    print(info_text("🔄 Syncing time now..."))
     from core.sync_engine import check_internet_and_sync
     from utils import send_notification
 
     result = check_internet_and_sync(silent=silent, notify=notify)
 
     if result.success:
-        print(success_text("✅ Time synchronized successfully!"))
         log("SYNC_SUCCESS", "Time synchronized successfully.", console=False)
-        
         if notify:
             send_notification(
                 "Time Sync Success",
@@ -35,7 +31,6 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
             )
         
         if result.warning:
-            print(warning_text(f"⚠️ Warning: {result.warning}"))
             if notify:
                 send_notification(
                     "Time Sync Warning",
@@ -46,9 +41,7 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
                 )
             log("SYNC_WARNING", result.warning, console=False)
             return f"Warning: {result.warning}"
-        return "Success: Time synchronized successfully."
     else:
-        print(error_text(f"❌ Time synchronization failed: {result.error}"))
         if notify:
             send_notification(
                 "Time Sync Failed",
@@ -57,7 +50,8 @@ def sync_time_action(silent : bool = False, notify : bool = False) -> str:
                 group="sync-status"
             )
         log("SYNC_FAILED", f"Time synchronization failed: {result.error}", console=False)
-        return f"Failed: {result.error}"
+
+    return result
 
 
 def get_status(include_timezone_options=True) -> dict:
@@ -84,70 +78,57 @@ def get_status(include_timezone_options=True) -> dict:
 
 def open_logs():
     """Opens the log file in the default text editor. If the log file doesn't exist, shows a warning message."""
-    print(info_text("Logs file opening..."))
     try:
         if LOG_FILE.exists():
+            print("Logs file opening...")
             os.startfile(LOG_FILE)
         else:
-            print(warning_text("No logs found."))
+            print("No logs found.")
     except Exception as e:
-        print(error_text(f"Failed to open logs: {e}"))
+        print(f"Failed to open logs: {e}")
 
 
-def _toggle_feature(action, task_name, enable_fn, disable_fn, name):
-    """Generic function to toggle a feature on/off based on the provided action. It checks the current state using exists_fn, enables or disables the feature accordingly, and then prints the new status."""
+def _toggle_feature(action, task_name, enable_fn, disable_fn) -> bool:
     from core.task_scheduler import task_exists
     if action == "enable":
         enable_fn()
     elif action == "disable":
         disable_fn()
-    elif action == "status":
-        pass
-    else:  # toggle
-        if task_exists(task_name):
-            disable_fn()
-        else:
-            enable_fn()
-
-    is_enabled = task_exists(task_name)
-    status_text = success_text("enabled") if is_enabled else error_text("disabled")
-    icon = "✅" if is_enabled else "❌"
-    print(f"{icon} {name} {status_text}")
+    elif action != "status":
+        (disable_fn if task_exists(task_name) else enable_fn)()
+    return task_exists(task_name)
 
 
 def toggle_startup(action=None):
     """Enables, disables, or shows the status of the startup sync feature. Uses the task scheduler to create or remove a task that runs TimeSync on Windows startup."""
     from core.task_scheduler import create_startup_task, remove_startup_task
-    _toggle_feature(
+    return _toggle_feature(
         action,
         STARTUP_TASK_NAME,
         lambda: create_startup_task(),
         remove_startup_task,
-        "Startup"
     )
 
 
 def toggle_periodic(action=None):
     """Enables, disables, or shows the status of the periodic sync feature. Uses the task scheduler to create or remove a task that runs TimeSync every hour."""
     from core.task_scheduler import create_periodic_task, remove_periodic_task
-    _toggle_feature(
+    return _toggle_feature(
         action,
         PERIODIC_TASK_NAME,
         lambda: create_periodic_task(),
         remove_periodic_task,
-        "Periodic Sync"
     )
 
 
 def toggle_resume(action=None):
     """Enables, disables, or shows the status of the resume on wake feature. Uses the task scheduler to create or remove a task that runs TimeSync when the computer wakes from sleep or hibernate."""
     from core.task_scheduler import create_resume_task, remove_resume_task
-    _toggle_feature(
+    return _toggle_feature(
         action,
         RESUME_TASK_NAME,
         lambda: create_resume_task(),
         remove_resume_task,
-        "Resume"
     )
 
 
@@ -165,18 +146,16 @@ def toggle_notify(action=None):
         settings["notifications"] = not current
 
     save_settings(settings)
-    is_enabled = settings["notifications"]
-    status = success_text("enabled") if is_enabled else error_text("disabled")
-    print(f"🔔 Notifications {status}.")
+    return settings["notifications"]
 
 # ==================================================
 # notifications actions
 # ==================================================
 
-def create_cancel_file():
-    """Creates a cancel file that signals the background sync process to stop. If the file cannot be created, logs an error message."""
+def create_cancel_file(session_id=None):
+    """Signal cancellation, optionally for one specific waiting sync session."""
     try:
-        CANCEL_FILE.touch()
+        CANCEL_FILE.write_text(session_id or "", encoding="utf-8")
     except Exception as e:
         log("ERROR", f"Failed to create cancel file: {e}", console=False)
 
@@ -191,11 +170,10 @@ def disable_warning_action():
 
 def set_timezone(timezone_name):
     """Apply the selected Windows timezone without saving it in app settings."""
-    import subprocess
 
     timezone_id = get_timezone_id(timezone_name)
     try:
-        subprocess.run(["tzutil", "/s", timezone_id], check=True, capture_output=True, text=True)
+        run_cmd(["tzutil", "/s", timezone_id])
         log("INFO", f"Timezone changed to {timezone_id}", console=True)
         return get_timezone_label(timezone_id)
     except Exception as exc:
@@ -227,8 +205,8 @@ def restart_pc():
     /t 0 : remaining time (zero seconds)
     /f : force-close open applications to prevent the process from hanging
     """
-    print("🔌 Restarting PC now...")
     try:
+        print("🔌 Restarting PC now...")
         ctypes.windll.shell32.ShellExecuteW(None, "open", "shutdown.exe", "/r /t 0 /f", None, 0)
     except Exception as e:
         log("ERROR", f"Failed to restart PC: {e}", console=True)

@@ -13,6 +13,30 @@ from utils.console import success_text, error_text, warning_text, info_text, ena
 # ==================================================
 
 
+def cmd_sync(silent: bool = False, notify: bool = False):
+    """Command to sync time immediately. Prints a status message indicating success, failure, or any warnings."""
+    print(info_text("🔄 Syncing time now...\n"))
+    result = actions.sync_time_action(silent=silent, notify=notify)
+    
+    if result.success:
+        print(success_text("✅ Time synchronized successfully!"))
+        if result.warning:
+            print(warning_text(f"⚠️ Warning: {result.warning}"))
+    else:
+        print(error_text(f"❌ Time synchronization failed: {result.error}"))
+
+
+def make_toggle_command(icon, label, fn):
+    def cmd(action="status"):
+        try:
+            enabled = fn(action)
+        except Exception as e:
+            print(error_text(f"❌ {label}: {e}"))
+            return
+        print(f"{icon if enabled else '❌'} {label} {enabled_disabled_text(enabled)}")
+    return cmd
+
+
 def print_status():
     status = actions.get_status(include_timezone_options=False)
     print("\n=== TimeSync Status ===\n")
@@ -194,6 +218,7 @@ def cmd_completion(shell, install=False):
 
 
 COMMANDS = {
+    "now": cmd_sync,
     "cancel": actions.create_cancel_file,
     "disable-warning": actions.disable_warning_action,
     "restart-pc": actions.restart_pc,
@@ -204,8 +229,8 @@ COMMANDS = {
 }
 
 ACTION_COMMANDS = {
-    "startup": actions.toggle_startup,
-    "periodic": actions.toggle_periodic,
-    "resume": actions.toggle_resume,
-    "notify": actions.toggle_notify,
+    "startup": make_toggle_command("🚀", "Startup sync", actions.toggle_startup),
+    "periodic": make_toggle_command("⏰", "Periodic Sync", actions.toggle_periodic),
+    "resume": make_toggle_command("😴", "Resume on Wake", actions.toggle_resume),
+    "notify": make_toggle_command("🔔", "Notifications", actions.toggle_notify),
 }

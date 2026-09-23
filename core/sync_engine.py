@@ -22,8 +22,6 @@ class SyncResult:
 def sync_windows_time(silent=True) -> SyncResult:
     relaunch_as_admin()
     try:
-        print("🔄 Syncing Windows time started...\n")
-
         if _sync_with_timezone_correction(silent):
             return SyncResult(success=True)
         else:

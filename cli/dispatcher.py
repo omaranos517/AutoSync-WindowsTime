@@ -1,6 +1,5 @@
 from .parser import get_parser
 from utils.console import enable_ansi_colors
-from core import actions
 from .commands import COMMANDS, ACTION_COMMANDS, cmd_completion, cmd_timezone
 
 
@@ -14,13 +13,15 @@ def run_cli():
         print("\n\nUse 'timesync help' for more information.\n\n")
         return
 
-    if args.command == "now":
-        silent = args.auto or args.silent
-        notify = args.notify
-        actions.sync_time_action(silent=silent, notify=notify)
-
     elif args.command in COMMANDS:
-        COMMANDS[args.command]()
+        if args.command == "now":
+            silent = args.auto or args.silent
+            notify = args.notify
+            COMMANDS[args.command](silent=silent, notify=notify)
+        elif args.command == "cancel":
+            COMMANDS[args.command](args.cancel_session)
+        else:
+            COMMANDS[args.command]()
 
     elif args.command in ACTION_COMMANDS:
         ACTION_COMMANDS[args.command](args.action or "status")

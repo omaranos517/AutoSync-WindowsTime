@@ -4,9 +4,13 @@ from utils.admin import relaunch_as_admin
 from utils import log, run_cmd
 from config import APP_DIR, STARTUP_TASK_NAME, RESUME_TASK_NAME, PERIODIC_TASK_NAME
 
+
+class TaskSchedulerError(Exception):
+    pass
+
+
 def _create_task(task_name: str, trigger_type: str, trigger_args: list[str], notify : bool = False):
     relaunch_as_admin()
-
     executable_path = APP_DIR / "timesync-gui.exe"  # Use the GUI version for startup to provide a better user experience on boot. The GUI will then launch the core sync process in the background and exit immediately, so it won't cause any noticeable delay during startup.
     # command = f'"{executable_path}" now --silent --notify' if notify else f'"{executable_path}" now --silent'
     try:
@@ -20,15 +24,18 @@ def _create_task(task_name: str, trigger_type: str, trigger_args: list[str], not
             "/rl", "highest",
             "/f"
         ])
-        log("INFO", f"Task '{task_name}' created in Task Scheduler (Admin Privileges)", console=False)
-
     except subprocess.CalledProcessError as e:
-        log("ERROR", f"Failed to create task '{task_name}': {e}", console=True)
+        log("ERROR", f"Failed to create '{task_name}' task: {e}", console=True)
+        raise TaskSchedulerError(f"Failed to create '{task_name}' task: {e}")
+    
+    if not task_exists(task_name):
+        raise TaskSchedulerError(f"Failed to create '{task_name}' task")
+    
+    log("INFO", f"Task '{task_name}' created in Task Scheduler (Admin Privileges)", console=False)
 
 
 def _remove_task(task_name: str):
     relaunch_as_admin()
-
     try:
         run_cmd([
             "schtasks",
@@ -36,11 +43,13 @@ def _remove_task(task_name: str):
             "/tn", task_name,
             "/f"
         ])
-        log("INFO", f"Task '{task_name}' removed from Task Scheduler (Admin Privileges)", console=False)
-
     except subprocess.CalledProcessError as e:
-        log("ERROR", f"Failed to remove task '{task_name}': {e}", console=True)
-
+        raise TaskSchedulerError(f"Failed to remove '{task_name}' task: {e}")
+    
+    if task_exists(task_name):
+        raise TaskSchedulerError(f"Failed to remove '{task_name}' task")
+    
+    log("INFO", f"Task '{task_name}' removed from Task Scheduler (Admin Privileges)", console=False)
 
 def create_startup_task():
     _create_task(STARTUP_TASK_NAME, "onlogon", ["/delay", "0000:00"], True)

@@ -1,4 +1,4 @@
-from .notifySystem import send_notification
+from .notifySystem import send_notification # remove_notification
 from .app_logger import log
 from .command_runner import run_cmd
 from .protocol import ensure_protocol_registered, normalize_protocol_args, _protocol_exe_path

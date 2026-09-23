@@ -1,7 +1,13 @@
 import ctypes
 import sys
 
-from utils import log, relaunch_as_admin, ensure_protocol_registered, normalize_protocol_args
+from utils import (
+    log,
+    relaunch_as_admin,
+    ensure_protocol_registered,
+    normalize_protocol_args
+    # remove_notification
+    )
 from config import APP_ID
 
 # ==================================================
@@ -9,6 +15,9 @@ from config import APP_ID
 # ==================================================
 
 def main():
+    # A prior wait can have been interrupted by shutdown before it could remove its toast.
+    # remove_notification("sync-wait", "sync-status")
+
     ensure_protocol_registered()
     normalize_protocol_args()
 

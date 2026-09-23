@@ -47,7 +47,9 @@ def normalize_protocol_args():
         return
 
     sys.argv = [sys.argv[0], command]
+    query = parse_qs(parsed.query or "")
+    if command == "cancel" and query.get("session"):
+        sys.argv.extend(["--session", query["session"][0]])
     if command == "now":
-        query = parse_qs(parsed.query or "")
         if query.get("auto", ["0"])[0] == "1":
             sys.argv.append("--auto")

@@ -8,7 +8,7 @@
 AppId={{F1A0C0F3-1234-4EAA-9999-ABCDE1234567}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} v{#MyAppVersion}
+AppVerName={#MyAppName}
 AppPublisher={#MyAppPublisher}
 AppSupportURL=https://github.com/omaranos517/AutoSync-WindowsTime
 SetupIconFile={#SourcePath}\..\assets\icon.ico
@@ -36,6 +36,7 @@ Name: "startup"; Description: "Run TimeSync at Windows startup"; Flags: checkedo
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "startup enable"; Tasks: startup; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Parameters: "resume enable"; Tasks: startup; Flags: runhidden
+Filename: "{app}\{#MyAppExeName}"; Parameters: "periodic enable"; Flags: runhidden runasoriginaluser waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Parameters: "completion powershell --install"; Flags: runhidden runasoriginaluser waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch TimeSync"; Flags: nowait postinstall skipifsilent
 
