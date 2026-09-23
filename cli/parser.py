@@ -29,7 +29,7 @@ def get_parser():
     subparsers.add_parser("restart-pc")
 
     # --- Commands with Actions (startup, resume, notify) ---
-    for cmd_name, cmd_help in {"startup" : "This feature manages the startup sync task", "periodic" : "This feature manages the periodic sync task", "resume" : "This feature manages the resume sync task", "notify" : "This feature manages the notifications for TimeSync"}.items():
+    for cmd_name, cmd_help in {"startup" : "This feature manages the startup sync task", "periodic" : "This feature manages the periodic sync task (Hourly)", "resume" : "This feature manages the resume sync task", "notify" : "This feature manages the notifications for TimeSync"}.items():
         cmd_p = subparsers.add_parser(cmd_name, help=cmd_help)
         cmd_p.add_argument(
             "action",
