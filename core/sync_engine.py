@@ -6,10 +6,7 @@ from utils.admin import relaunch_as_admin
 from utils import log, run_cmd
 
 from .internet_check import is_internet_available
-from .timezones import (
-    get_current_windows_timezone_online_offset,
-    set_windows_timezone_for_online_offset,
-)
+from .timezones import reconcile_windows_timezone
 
 class SyncResult:
     def __init__(self, success: bool, warning: str = None, warning_actions: list = None, error: str = ""):
@@ -62,38 +59,8 @@ def _sync_with_timezone_correction(silent):
 
 
 def _correct_windows_timezone_from_online_offset():
-    """Apply a Windows zone with TimeAPI's current offset, if needed."""
-    timezone_info = get_current_windows_timezone_online_offset()
-    if timezone_info is None:
-        log("WARNING", "Could not verify the Windows time-zone offset online.", console=False)
-        return False
-
-    if timezone_info["matches"]:
-        log(
-            "INFO",
-            f"Time-zone offset verified for {timezone_info['windows_id']} "
-            f"({timezone_info['iana_timezone']}).",
-            console=False,
-        )
-        return False
-
-    target_id = set_windows_timezone_for_online_offset(timezone_info)
-    if target_id is None:
-        log(
-            "WARNING",
-            f"No installed Windows time zone matches TimeAPI's offset for "
-            f"{timezone_info['iana_timezone']}.",
-            console=True,
-        )
-        return False
-
-    log(
-        "INFO",
-        f"Time zone changed from {timezone_info['windows_id']} to {target_id} "
-        "to match TimeAPI's current offset.",
-        console=True,
-    )
-    return True
+    """Compatibility wrapper for timezone reconciliation."""
+    return reconcile_windows_timezone()
 
 
 def attempt_time_sync(silent) -> bool:

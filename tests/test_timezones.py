@@ -46,10 +46,14 @@ class TimezoneSettingsTests(unittest.TestCase):
             ["tzutil", "/l"], check=True, capture_output=True, text=True
         )
 
-    def test_timezone_selection_is_not_saved_to_settings(self):
+    def test_timezone_selection_is_saved_as_preference(self):
         settings = settings_module.load_settings()
+        settings["timezone_fallback"] = {
+            "preferred_timezone": "UTC",
+            "fallback_timezone": "Arab Standard Time",
+        }
         settings_module.save_settings(settings)
-        self.assertNotIn("timezone", settings_module.load_settings())
+        self.assertNotIn("preferred_timezone", settings_module.load_settings())
 
         with patch("subprocess.run") as run:
             actions.set_timezone("(UTC+02:00) Cairo [Egypt Standard Time]")
@@ -63,7 +67,11 @@ class TimezoneSettingsTests(unittest.TestCase):
                 text=True,
             ),
         )
-        self.assertNotIn("timezone", settings_module.load_settings())
+        self.assertEqual(
+            settings_module.load_settings()["preferred_timezone"],
+            "Egypt Standard Time",
+        )
+        self.assertNotIn("timezone_fallback", settings_module.load_settings())
 
     def test_search_uses_windows_display_name_and_id(self):
         with patch("subprocess.run") as run:

@@ -169,11 +169,15 @@ def disable_warning_action():
 
 
 def set_timezone(timezone_name):
-    """Apply the selected Windows timezone without saving it in app settings."""
+    """Apply and remember the user's preferred Windows timezone."""
 
     timezone_id = get_timezone_id(timezone_name)
     try:
         run_cmd(["tzutil", "/s", timezone_id])
+        settings = load_settings()
+        settings["preferred_timezone"] = timezone_id
+        settings.pop("timezone_fallback", None)
+        save_settings(settings)
         log("INFO", f"Timezone changed to {timezone_id}", console=True)
         return get_timezone_label(timezone_id)
     except Exception as exc:

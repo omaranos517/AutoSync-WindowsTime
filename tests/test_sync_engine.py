@@ -9,9 +9,43 @@ sys.modules.setdefault(
 )
 
 from core import sync_engine
+from core import timezones
 
 
 class SyncTimezoneCorrectionTests(unittest.TestCase):
+    def test_restores_preferred_timezone_when_its_offset_matches_again(self):
+        settings = {
+            "timezone_fallback": {
+                "preferred_timezone": "Egypt Standard Time",
+                "fallback_timezone": "E. Africa Standard Time",
+            }
+        }
+        with (
+            patch(
+                "core.timezones.get_current_windows_timezone_online_offset",
+                return_value={
+                    "windows_id": "E. Africa Standard Time",
+                    "matches": True,
+                },
+            ),
+            patch(
+                "core.timezones.get_windows_timezone_online_offset",
+                return_value={"online_offset_minutes": 120},
+            ),
+            patch(
+                "core.timezones.get_windows_timezone_offsets",
+                return_value={"Egypt Standard Time": 120},
+            ),
+            patch("core.timezones.load_settings", return_value=settings),
+            patch("core.timezones.save_settings") as save_settings,
+            patch("core.timezones.run_cmd") as run_cmd,
+        ):
+            self.assertTrue(timezones.reconcile_windows_timezone())
+
+        run_cmd.assert_called_once_with(["tzutil", "/s", "Egypt Standard Time"])
+        self.assertNotIn("timezone_fallback", settings)
+        save_settings.assert_called_once_with(settings)
+
     def test_resyncs_after_timezone_was_corrected(self):
         with (
             patch("core.sync_engine.attempt_time_sync", side_effect=[True, True]) as sync,

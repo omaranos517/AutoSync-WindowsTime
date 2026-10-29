@@ -6,6 +6,7 @@ offer a zone that did not match the user's installed Windows rules.
 """
 
 from utils import run_cmd
+from config.settings import load_settings, save_settings
 
 import json
 import re
@@ -108,6 +109,12 @@ def get_current_windows_timezone_online_offset():
     the local time currently produced by Windows.
     """
     windows_id = get_current_windows_timezone()
+    return get_windows_timezone_online_offset(windows_id)
+
+
+def get_windows_timezone_online_offset(windows_id):
+    """Return TimeAPI's current offset for a specific Windows time zone."""
+
     iana_timezone = get_iana_timezone_for_windows_id(windows_id)
     if not iana_timezone:
         return None
@@ -142,6 +149,28 @@ def get_current_windows_timezone_online_offset():
     }
 
 
+def get_windows_timezone_offsets():
+    """Return current offsets for all Windows time zones reported by .NET."""
+    command = (
+        "[System.TimeZoneInfo]::GetSystemTimeZones() | ForEach-Object { "
+        "'{0}|{1}' -f $_.Id, [int]$_.GetUtcOffset([datetime]::UtcNow).TotalMinutes "
+        "}"
+    )
+    try:
+        result = run_cmd(["powershell", "-NoProfile", "-Command", command])
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return {}
+
+    offsets = {}
+    for line in result.stdout.splitlines():
+        try:
+            windows_id, offset = line.strip().rsplit("|", 1)
+            offsets[windows_id] = int(offset)
+        except ValueError:
+            continue
+    return offsets
+
+
 def set_windows_timezone_for_online_offset(timezone_info):
     """Select an installed Windows zone whose current offset matches TimeAPI.
 
@@ -152,29 +181,15 @@ def set_windows_timezone_for_online_offset(timezone_info):
     if not timezone_info or timezone_info["matches"]:
         return None
 
-    command = (
-        "[System.TimeZoneInfo]::GetSystemTimeZones() | ForEach-Object { "
-        "'{0}|{1}' -f $_.Id, [int]$_.GetUtcOffset([datetime]::UtcNow).TotalMinutes "
-        "}"
-    )
-    try:
-        result = run_cmd(["powershell", "-NoProfile", "-Command", command])
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
-
     desired_offset = timezone_info["online_offset_minutes"]
     current_id = timezone_info["windows_id"]
     current_area = timezone_info["iana_timezone"].split("/", 1)[0]
     candidates = []
-    for line in result.stdout.splitlines():
-        try:
-            windows_id, offset = line.strip().rsplit("|", 1)
-            if windows_id != current_id and int(offset) == desired_offset:
-                candidate_iana = get_iana_timezone_for_windows_id(windows_id) or ""
-                same_area = candidate_iana.split("/", 1)[0] == current_area
-                candidates.append((not same_area, windows_id))
-        except ValueError:
-            continue
+    for windows_id, offset in get_windows_timezone_offsets().items():
+        if windows_id != current_id and offset == desired_offset:
+            candidate_iana = get_iana_timezone_for_windows_id(windows_id) or ""
+            same_area = candidate_iana.split("/", 1)[0] == current_area
+            candidates.append((not same_area, windows_id))
 
     if not candidates:
         return None
@@ -185,3 +200,83 @@ def set_windows_timezone_for_online_offset(timezone_info):
         return target_id
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
+
+
+def reconcile_windows_timezone():
+    """Keep the active Windows timezone aligned with the online timezone rules."""
+    from utils import log
+
+    timezone_info = get_current_windows_timezone_online_offset()
+    if timezone_info is None:
+        log("WARNING", "Could not verify the Windows time-zone offset online.", console=False)
+        return False
+
+    settings = load_settings()
+    fallback = settings.get("timezone_fallback")
+    if not isinstance(fallback, dict):
+        fallback = None
+
+    current_id = timezone_info["windows_id"]
+    if fallback:
+        fallback_id = fallback.get("fallback_timezone")
+        preferred_id = fallback.get("preferred_timezone")
+        if current_id != fallback_id:
+            settings.pop("timezone_fallback", None)
+            save_settings(settings)
+            fallback = None
+        else:
+            preferred_info = (
+                get_windows_timezone_online_offset(preferred_id)
+                if preferred_id
+                else None
+            )
+            current_offsets = get_windows_timezone_offsets()
+            if (
+                preferred_info
+                and current_offsets.get(preferred_id)
+                == preferred_info["online_offset_minutes"]
+            ):
+                try:
+                    run_cmd(["tzutil", "/s", preferred_id])
+                    settings.pop("timezone_fallback", None)
+                    save_settings(settings)
+                    log(
+                        "INFO",
+                        f"Restored preferred time zone {preferred_id} after its offset matched again.",
+                        console=True,
+                    )
+                    return True
+                except Exception as exc:
+                    log("WARNING", f"Failed to restore preferred time zone: {exc}", console=True)
+
+    if timezone_info["matches"]:
+        log(
+            "INFO",
+            f"Time-zone offset verified for {timezone_info['windows_id']} "
+            f"({timezone_info['iana_timezone']}).",
+            console=False,
+        )
+        return False
+
+    target_id = set_windows_timezone_for_online_offset(timezone_info)
+    if target_id is None:
+        log(
+            "WARNING",
+            f"No installed Windows time zone matches TimeAPI's offset for "
+            f"{timezone_info['iana_timezone']}.",
+            console=True,
+        )
+        return False
+
+    log(
+        "INFO",
+        f"Time zone changed from {current_id} to {target_id} "
+        "to match TimeAPI's current offset.",
+        console=True,
+    )
+    settings["timezone_fallback"] = {
+        "preferred_timezone": (fallback or {}).get("preferred_timezone", current_id),
+        "fallback_timezone": target_id,
+    }
+    save_settings(settings)
+    return True
